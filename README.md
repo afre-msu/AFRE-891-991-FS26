@@ -40,8 +40,8 @@ This work is licensed under a
 
 
 
- [**Lecture 1: R Intro**]()
- ([html]()) ([pdf]())
+ [**Lecture 1: R Intro**](https://github.com/afre-msu/AFRE-891-991-FS26/tree/56414c0494fb0e680f0c029aa5e1e0848ee3be5a/Lecture%20Slides/01-R-Intro)
+ ([html](https://github.com/afre-msu/AFRE-891-991-FS26/blob/56414c0494fb0e680f0c029aa5e1e0848ee3be5a/Lecture%20Slides/01-R-Intro/01-R-Intro.html)) ([pdf](https://github.com/afre-msu/AFRE-891-991-FS26/blob/56414c0494fb0e680f0c029aa5e1e0848ee3be5a/Lecture%20Slides/01-R-Intro/01-R-Intro.pdf))
 
  * Course Introduction
  * R and RStudio
