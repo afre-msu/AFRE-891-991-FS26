@@ -82,7 +82,7 @@ Throughout this course we will require a few pieces of (free!) software:
   * **Windows:** .hi-red[RTools]
   * **Mac:** .hi-pink[macrtools]
   
-You'll also need to create a [Github Education account](https://education.github.com/discount_requests/new).
+You'll also need to create a [Github Education account](https://github.com/education/students).
 
 ---
 # R vs. RStudio
@@ -99,7 +99,7 @@ To install .hi-medgrn[R], go to the [.hi-orange[R Project website]](https://ftp.
 
 - **Windows:** "R For Windows > Base > Download R # for Windows" 
  
-- **Mac:** "R for (Mac) OS X > R-#.pkg"
+- **Mac:** "R for macOS > R-#.pkg"
 
 - Where "#" is the current version number
 
@@ -112,14 +112,12 @@ To install .hi-medgrn[R], go to the [.hi-orange[R Project website]](https://ftp.
 
 # Installing RStudio
 
-To install .hi-blue[RStudio], go to the [.hi-orange[RStudio Download Page]](https://posit.co/download/rstudio-desktop/#download)
+To install .hi-blue[RStudio], go to the [.hi-orange[RStudio Download Page]](https://docs.posit.co/ide/user/#rstudio-ide-oss-downloads)
 .pull-left-sm[
-- Scroll down, follow the link to install RStudio for your operating system. 
-- Correct file should be linked under **2. Install RStudio**
-- Can scroll further down to the entire list and download the version for Windows or Mac. 
+- Use the links to install RStudio for your operating system. 
  ]
  .pull-right-lg[
-<img src="images/RSTUDIO_SITE.png" width = "120%"/> 
+<img src="images/rstudio_site.png" width = "120%"/> 
 ]
 
 ---
@@ -130,7 +128,7 @@ To install .hi-blue[RStudio], go to the [.hi-orange[RStudio Download Page]](http
   * _Note:_ .hi-red[Rtools] is only for .hi-red[Windows]!
   
   
-To install the current version of .hi-red[Rtools], navigate to the [Rtools website](https://cran.r-project.org/bin/windows/Rtools/rtools44/rtools.html), download the installer, and follow the prompts.
+To install the current version of .hi-red[Rtools], navigate to the [Rtools website](https://cran.r-project.org/bin/windows/Rtools/), download the installer, and follow the prompts.
 
 
 ---
