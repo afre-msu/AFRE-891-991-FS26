@@ -17,9 +17,9 @@ This work is licensed under a
 ***
 ## Syllabus
 
-[**AFRE 891 FS26 Syllabus**]()
+[**AFRE 891 FS26 Syllabus**](https://github.com/afre-msu/AFRE-891-991-FS26/blob/67e2a2304dc34dda413a80eef70fcf5d0e05107b/Course%20Logistics/AFRE%20891/Syllabus%20AFRE%20891%20FS26.pdf)
 
-[**AFRE 991 FS26 Syllabus**]()
+[**AFRE 991 FS26 Syllabus**](https://github.com/afre-msu/AFRE-891-991-FS26/blob/67e2a2304dc34dda413a80eef70fcf5d0e05107b/Course%20Logistics/AFRE%20991/Syllabus%20AFRE%20991%20FS26.pdf)
 
 *Detailed Course Calendars can be found at the end of the syllabi*
 
@@ -30,8 +30,8 @@ This work is licensed under a
 
 **Note:** in order to view the HTML slides, you must first download them (GitHub will not show a preview).
 
- [**Lecture 0: Getting Started**]()
- ([html]()) ([pdf]())
+ [**Lecture 0: Getting Started**](https://github.com/afre-msu/AFRE-891-991-FS26/tree/63098b043c766d98d21c8c7c9d86e4c529171e9e/Lecture%20Slides/00-Getting-Started)
+ ([html](https://github.com/afre-msu/AFRE-891-991-FS26/blob/63098b043c766d98d21c8c7c9d86e4c529171e9e/Lecture%20Slides/00-Getting-Started/00-Getting-Started.html)) ([pdf](https://github.com/afre-msu/AFRE-891-991-FS26/blob/63098b043c766d98d21c8c7c9d86e4c529171e9e/Lecture%20Slides/00-Getting-Started/00-Getting-Started.pdf))
 
  * Installing R
  * Installing RStudio
