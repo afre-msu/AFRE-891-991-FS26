@@ -17,9 +17,9 @@ This work is licensed under a
 ***
 ## Syllabus
 
-[**AFRE 891 FS26 Syllabus**]()
+[**AFRE 891 FS26 Syllabus**](https://github.com/afre-msu/AFRE-891-991-FS26/blob/67e2a2304dc34dda413a80eef70fcf5d0e05107b/Course%20Logistics/AFRE%20891/Syllabus%20AFRE%20891%20FS26.pdf)
 
-[**AFRE 991 FS26 Syllabus**]()
+[**AFRE 991 FS26 Syllabus**](https://github.com/afre-msu/AFRE-891-991-FS26/blob/67e2a2304dc34dda413a80eef70fcf5d0e05107b/Course%20Logistics/AFRE%20991/Syllabus%20AFRE%20991%20FS26.pdf)
 
 *Detailed Course Calendars can be found at the end of the syllabi*
 
