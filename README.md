@@ -51,14 +51,14 @@ This work is licensed under a
  * Interacting with and Manipulating Data Frames
 
 
- [**Lecture 2: Productivity**]()
- ([html]()) ([pdf]())
+ [**Lecture 2: Productivity**](https://github.com/afre-msu/AFRE-891-991-FS26/tree/f7653a17b4d063e0237fec4797488e7d22f7a878/Lecture%20Slides/02-Productivity)
+ ([html](https://github.com/afre-msu/AFRE-891-991-FS26/blob/f7653a17b4d063e0237fec4797488e7d22f7a878/Lecture%20Slides/02-Productivity/02-Productivity.html)) ([pdf](https://github.com/afre-msu/AFRE-891-991-FS26/blob/f7653a17b4d063e0237fec4797488e7d22f7a878/Lecture%20Slides/02-Productivity/02-Productivity.pdf))
 
  * R Markdown
  * Version Control
- * Git(Hub) + RStudio
  * GitHub Desktop
- * Other Tips and Productivity Tools
+ * Git(Hub) and RStudio
+ * * Other Tips and Productivity Tools
 
  [**Lecture 3: Wrangling**]()
  ([html]()) ([pdf]())
