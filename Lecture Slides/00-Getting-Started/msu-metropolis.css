@@ -118,16 +118,16 @@ hr, .mline h1::after {
   font-style: italic;
 }
 
-.super{ 
-   position: relative; 
-   top: -0.5em; 
-   font-size: 80%; 
+.super{
+   position: relative;
+   top: -0.5em;
+   font-size: 80%;
 }
 
 .sub{
-   position: relative; 
+   position: relative;
    vertical-align:sub;
-   font-size: 80%; 
+   font-size: 80%;
 }
 
 /* Note */
@@ -285,6 +285,23 @@ hr, .mline h1::after {
 }
 .under {
   text-decoration: underline;
+}
+
+.center2 {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+.vcenter {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  -ms-transform: translate(-0%, -50%);
+  transform: translate(-0%, -50%);
 }
 
 /* turns on code text wrapping https://github.com/yihui/xaringan/issues/225*/

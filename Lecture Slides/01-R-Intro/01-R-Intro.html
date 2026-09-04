@@ -2834,7 +2834,16 @@ To start, let&#39;s .hi-purple[load a dataset]&lt;sup&gt;4&lt;/sup&gt; from the 
 
 ``` r
 pacman::p_load(dslabs)
+```
 
+```
+## package &#39;dslabs&#39; successfully unpacked and MD5 sums checked
+## 
+## The downloaded binary packages are in
+## 	C:\Users\james\AppData\Local\Temp\RtmpMj4JWR\downloaded_packages
+```
+
+``` r
 # load the historic co2 dataset
 data(historic_co2) 
 # can also wrap the dataset name in quotes: data(&quot;historic_co2&quot;)
@@ -2912,12 +2921,12 @@ summary(co2_df)
 ```
 
 ```
-##       year              co2              source   
-##  Min.   :-803182   Min.   :177.7   Length   :694  
-##  1st Qu.:-470498   1st Qu.:206.7   N.unique :  2  
-##  Median : -43278   Median :236.9   N.blank  :  0  
-##  Mean   :-219753   Mean   :245.9   Min.nchar:  9  
-##  3rd Qu.:  -8924   3rd Qu.:271.8   Max.nchar:  9  
+##       year              co2           source         
+##  Min.   :-803182   Min.   :177.7   Length:694        
+##  1st Qu.:-470498   1st Qu.:206.7   Class :character  
+##  Median : -43278   Median :236.9   Mode  :character  
+##  Mean   :-219753   Mean   :245.9                     
+##  3rd Qu.:  -8924   3rd Qu.:271.8                     
 ##  Max.   :   2018   Max.   :408.5
 ```
 
