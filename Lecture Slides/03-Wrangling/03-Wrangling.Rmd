@@ -173,7 +173,7 @@ Let's load the tidyverse meta-package and check the output.
 library(tidyverse)
 ```
 
-We see that we have actually loaded a number of packages (which could also be loaded individually): **ggplot2**, **tibble**, .hi-slate[dplyr], etc.
+We see that we have actually loaded a number of packages (which could also be loaded individually): .hi-slate[ggplot2], .hi-slate[tibble], .hi-slate[dplyr], etc.
 - We can also see information about the package versions and some .hi-purple[namespace conflicts].
 
 ---
@@ -185,7 +185,7 @@ The tidyverse actually comes with a .hi-blue[lot more packages] that aren't load
 tidyverse_packages()
 ```
 
-We'll use several of these additional packages during the remainder of this course: **haven** for loading Stata files, **lubridate** for working with dates, **rvest** package for webscraping.
+We'll use several of these additional packages during the remainder of this course: .hi-slate[haven] for loading STATA files, .hi-slate[lubridate] for working with dates, .hi-slate[rvest] package for webscraping.
 
 
 ---
@@ -196,7 +196,7 @@ This week we're going to focus on two packages:
 1. [dplyr](https://dplyr.tidyverse.org/)
 2. [tidyr](https://tidyr.tidyverse.org/)
 
-These are the workhorse packages for cleaning and wrangling data that you will likely make the most use of (alongside **ggplot2**, which we'll cover more in depth later on)
+These are the workhorse packages for cleaning and wrangling data that you will likely make the most use of (alongside .hi-slate[ggplot2], which we'll cover more in depth later on)
 - Data cleaning and wrangling occupies an .hi-medgrn[inordinate amount of time], no matter where you are in your research career.
 
 
@@ -328,6 +328,35 @@ Remember: Using vertical space .hi-pink[costs nothing] and makes for much more r
 
 PS — The pipe is originally from the [magrittr](https://magrittr.tidyverse.org/) package (hence the [not-a-pipe image](https://en.wikipedia.org/wiki/The_Treachery_of_Images)) earlier, which can do some other cool things if you're inclined to explore.
 
+
+---
+
+# Pipes: Alternate Argument
+
+By default, the pipe sends what's upstream into the .hi-medgrn[first argument] of the downstream function.
+
+If you want to pass it to a .hi-blue[different argument], place `.` in the target argument.
+
+--
+
+.pull-left[
+.hi-medgrn[Default:] $\ln(5)$
+```{r}
+5 %>%
+  log()
+```
+]
+--
+
+.pull-right[
+.hi-blue[Different Argument:] $\log_{5}(10)$
+```{r}
+5 %>%
+  log(10, .)
+```
+]
+
+
 ---
 name: nativepipe
 
@@ -342,6 +371,30 @@ mtcars |> subset(cyl==4) |> head()
 .footnote[<sup>1</sup> That's actually a `|` followed by a `>`. The default font on these slides just makes it look extra fancy.]
 
 ---
+name: nativepipe
+
+# The base R pipe: different arguments
+
+One .hi-red[difference] in base R pipe syntax: piping into .hi-blue[different arguments:]
+
+  * Use `_` (underscore) in place of `.` 
+  * Must .hi-blue[name the argument] you're piping into
+  
+
+.pull-left[
+```{r, error = T}
+5 |>
+  log(10, _)
+```
+]
+
+.pull-right[
+```{r}
+5 |>
+  log(10, base = _)
+```
+]
+---
 class: inverse, middle
 name: dplyr
 
@@ -353,7 +406,7 @@ name: dplyr
 # Aside: Updating Packages
 
 - Please make sure that you are running **at least dplyr 1.0.0** before continuing.
-- 1.0.0 has been around for a while now (currently on 1.1.4), but if you have an old old version of dplyr, these functions won't be available
+- 1.0.0 has been around for a while now (currently on 1.2.1), but if you have an old old version of dplyr, these functions won't be available
 - As well, it's a good idea to frequently update all your packages!
 
 ```{r dplyr_vers, cache=FALSE}
@@ -407,12 +460,48 @@ name: filter
 
 # 1) dplyr::filter
 
-We can chain multiple filter commands with the pipe (`%>%`), or just separate them within a single filter command using commas.
-```{r filter1}
+`filter(df, condition1, ...)` only keeps rows that match the specified condition(s)
+
+```{r}
 View(starwars)
+```
+
+.pull-left[
+.hi-blue[Character variable:] (in)equality, regular expressions
+```{r, eval = F}
 starwars |>
 filter( species == "Human") 
 ```
+]
+.pull-right[
+.hi-medgrn[Numeric variable:] (in)equality, comparisons
+```{r, eval = F}
+starwars %>%
+filter(
+  between(mass, 75, 150) 
+)
+```
+]
+---
+# 1) dplyr::filter
+
+`filter()` only keeps rows that match the specified condition(s)
+  
+```{r filter1, eval = T}
+starwars |>
+filter( species == "Human") 
+```
+
+---
+
+# 1) dplyr::filter
+We can chain multiple filter commands with the pipe (`%>%, |>`), or supply them as separate arguments within a single filter command.
+```{r}
+starwars |>
+filter(species == "Human", mass > 75, mass < 85, 
+       height %in% 170:180) 
+```
+
 
 ---
 
@@ -444,33 +533,52 @@ sky_check <- select(starwars, name, skywalker) %>%
 
 # Identifying Missing Data
 
-A very common `filter` use case is identifying (or removing) observations with .hi-medgrn[missing values]
-```{r filter3}
-starwars %>% 
-  drop_na()
+A very common `filter()` use case is identifying (or removing) observations with .hi-medgrn[missing values]
+
+```{r filter}
+filter(starwars, is.na((height))) %>%
+  nrow()
 ```
 
+--
+
+To .hi-blue[remove missing observations], simply use negation: `filter(!is.na(height))`
+
+```{r}
+filter(starwars, !is.na((height))) %>%
+  nrow()
+```
 
 ---
 # Removing Missing Data
-To .hi-blue[remove missing observations], simply use negation: `filter(!is.na(height))`
 
 Or use the convenient `drop_na()` verb:
 
+  * Drops `NA` on the named variables
+  * If none specified, drops `NA` in .hi-medgrn[any variable]
+  
+```{r}
+nrow(starwars)
+
+starwars %>% 
+  drop_na(height) %>%
+  nrow()
+```
+---
+# Removing Missing Data
+
+Or use the convenient `drop_na()` verb:
+
+  * Drops `NA` on the named variables
+  * If none specified, drops `NA` in .hi-medgrn[any variable]
+  
 ```{r drop_na}
 nrow(starwars)
 
-filter(starwars, is.na((height))) %>%
-  nrow()
-
-
 starwars %>% 
   drop_na() %>%
-  dim()
-
-identical(drop_na(starwars, height), filter(starwars, !is.na(height)))
+  nrow()
 ```
-
 
 ---
 name: arrange
@@ -501,13 +609,12 @@ starwars %>%
 
 # 2) dplyr::arrange 
 
-We can also nested sort by including multiple variables
+We can also .hi-medgrn[nested sort] by including .hi-medgrn[multiple variables]
   - Sort on first variable, then ties on the next, etc.
 ```{r arrange_nest}
 sw_ar_1 <- starwars %>% 
   arrange(desc(birth_year), name)
 ```
-
 
 ---
 name: select
@@ -515,11 +622,38 @@ name: select
 # 3) dplyr::select
 
 `select()` lets you .hi-pink[subset columns by name/condition]
-  * Use colons or `c()` to select multiple columns out of a data frame. (You can also use "first:last" for consecutive columns). 
-  * Deselect columns with `-` in front of the name(s).
-  * Variables will appear in the order you specify the arguments 
-  
+  * Places variable name arguments in specified order
+  * Can also use `first:last` syntax for currently consecutive columns
+
 ```{r select1}
+starwars %>% 
+  select(
+    name, species, height:mass
+  ) %>% head()
+```
+---
+
+# 3) dplyr::select
+
+`select()` lets you .hi-pink[subset columns by name/condition]
+  * Places variable name arguments in specified order
+  * Can also use `first:last` syntax for currently consecutive columns
+  * Deselect columns with `-` in front of the name(s).
+
+```{r}
+starwars %>% 
+  select(
+    name:sex, -mass
+  ) %>% head()
+```
+
+
+---
+# 3) dplyr::select
+
+`select()` also works well with [helper functions](https://dplyr.tidyverse.org/reference/select.html)
+  
+```{r}
 starwars %>% 
   select(
     where(is.logical)
@@ -527,33 +661,22 @@ starwars %>%
 ```
 
 ---
+# 3) dplyr::select
 
-# 3) dplyr::select 
-
-You can also .hi-medgrn[rename] some (or all) of your selected variables in place.
-```{r select2}
-starwars <- starwars %>%
-  select(-films)
+`select()` also works well with [selection helper functions](https://dplyr.tidyverse.org/reference/select.html)
+  
+```{r}
+starwars %>% 
+  select(
+    ends_with("color")
+  )
 ```
 
 ---
+# 3) dplyr::select
 
-# dplyr::rename
+`select()` also works well with [selection helper functions](https://dplyr.tidyverse.org/reference/select.html)
 
-Note: you can .hi-purple[rename columns] without subsetting with `rename`. Try this now by replacing `select(...)` in the above code chunk with `rename(...)`.
-
-```{r rename, include = F}
-
-
-sw_3 <- starwars %>%
-  rename(height_cm = height)
-```
-
----
-
-# 3) dplyr::select 
-
-The `select(contains(PATTERN))` option provides a nice shortcut to quickly select based on variable naming patterns
 ```{r select3}
 starwars %>% 
   select(name, contains("color"))
@@ -561,7 +684,32 @@ starwars %>%
 
 ---
 
-# 3) dplyr::select
+# 3) dplyr::select 
+
+You can also .hi-medgrn[rename] some (or all) of your selected variables while changing places.
+```{r select2}
+starwars %>%
+  select(height_cm = height, everything()) %>%
+  head()
+```
+
+
+---
+
+# dplyr::rename
+
+Note: you can .hi-purple[rename columns] without subsetting with `rename`.
+
+```{r rename, include = F}
+starwars %>%
+  rename(height_cm = height) %>%
+   head()
+```
+
+
+---
+
+# 3) everything()
 
 The `select(..., everything())` option is another useful shortcut if you only want to bring some variable(s) to the "front" of a data frame.
 
@@ -575,19 +723,21 @@ starwars %>%
 
 # 3) dplyr::select 
 
-.hi-slate[dplyr] has an entire group of .hi-medgrn[selection helpers] that can be used in many functions:
+Some other [selection helper functions](https://dplyr.tidyverse.org/reference/select.html):
 
 
-|  |  |
+| Operator/Function | Role |
 |---| ---|
+| `!` | Take complement of variable set |
+| `&` | intersection of two sets |
+| `last_col()` | furthest right column |
 | `starts_with("D")` | names starting with "D" |
-| `ends_with("_hh")` | names ending with "_hh"|
-| `contains("d")` | names containing "d" |
 | ` matches("^[a-d]")` | names matching regular expression "^[a-d]" |
 | `num_range(x, 1:10)` | names following pattern `x1`, `x2`, ..., `x10` |
 | `all_of(vars)`/`any_of(vars)` | matches names stored in character vector `vars` |
-| `last_col()` | further right column |
-| `where(is.numeric)` | all variables where `is.numeric()` returns`TRUE` |
+| `group_cols()` | variables defining group structure |
+
+
 
 ---
 
@@ -656,7 +806,7 @@ starwars %>%
   select(name, height) %>%
   filter(name %in% c("Luke Skywalker", "Anakin Skywalker")) %>% 
   mutate(tall1 = height > 180) %>%
-  mutate(tall2 = ifelse(height > 180, "Tall", "Short")) ## Same effect, but can choose labels
+  mutate(tall2 = if_else(height > 180, "Tall", "Short")) ## Same effect, but can choose labels
 
 ```
 
@@ -678,24 +828,33 @@ starwars %>%
 ---
 # across
 
-Alternatively, we can provide an "anonymous .hi-medgrn[lambda function] using syntax from the .hi-slate[purrr] package:
-  - `~` to indicate we're building an anonymous lambda function 
-  - `.x` the variables being passed in from `across()` 
+Alternatively, we can provide an "anonymous" .hi-medgrn[lambda function] using syntax from the .hi-slate[purrr] package:
+  - `\(x)` to indicate we're building an anonymous lambda function 
+  - `x` the variables being passed in from `across()` 
   
-```{r, lambda}
+```{r, eval = F}
 sw_4 <- select(starwars, name:eye_color) %>%
   mutate(
     across(
       # variables to select
       c(mass),
       # anonymous lambda function
-      ~ .x / 100
+      \(x) x / 100
     )
   )
+```
 
 
+---
+# across
+
+Alternatively, we can provide an "anonymous" .hi-medgrn[lambda function] using syntax from the .hi-slate[purrr] package:
+  - `\(x)` to indicate we're building an anonymous lambda function 
+  - `x` the variables being passed in from `across()` 
+  
+```{r, lambda}
 starwars %>% select(name:eye_color) %>% 
-  mutate(across(c(height, mass),   ~ .x / 100)) %>% #<< 
+  mutate(across(c(height, mass),   \(x) x / 100)) %>% #<< 
   head(5)
 ```
 
@@ -707,16 +866,17 @@ name: summarise
 `summarise()` lets us .hi-blue[manually specify summary statistics]. It's particularly useful in combination with the `group_by()` command.
 
 ```{r summ1}
-starwars %>% 
+sw_5 <- starwars %>% 
   drop_na(height) %>%
   group_by(species) %>%
   summarise("Mean Height" = mean(height),
             "Std Dev Height" = sd(height),
             Count = n())
+sw_5
 ```
 
----
 
+---
 # 5) dplyr::summarise 
 
 Note that including `na.rm = TRUE` (or `na.rm = T`) is usually a good idea, otherwise, missing values will result in `NA`
@@ -727,7 +887,6 @@ starwars %>%
 ```
 
 ---
-
 # 5) dplyr::summarise 
 
 Note that including `na.rm = TRUE` (or `na.rm = T`) is usually a good idea, otherwise, missing values will result in `NA`
@@ -736,8 +895,8 @@ Note that including `na.rm = TRUE` (or `na.rm = T`) is usually a good idea, othe
 starwars %>% 
   summarise(mean_height = mean(height, na.rm = TRUE))
 ```
----
 
+---
 # 5) dplyr::summarise 
 
 The same `across()`-based workflow that we saw with `mutate` a few slides back also works with `summarise`. For example:
@@ -789,6 +948,17 @@ starwars %>%
 ```
 
 ---
+# Other dplyr Goodies: slice
+
+Several other case-specific `slice` versions exist:
+
+| Function | Role |
+| -------- | ---- |
+| `slice_head/tail(df, n, prop, by)` | Grab the first `n`/`prop` top or bottom rows |
+| `slice_min/max(df, order_by, ...)` | Grab the `n`/`prop` min or max value rows |
+| `slice_sample(df, replace = F, ...)` | Grab random sample of rows |
+
+---
 # Other dplyr Goodies: pull
 
 `pull()`: Extracts a column from a data frame as a vector or scalar.
@@ -807,11 +977,15 @@ Exactly like using .hi-medgrn[$], but works with pipes!
 `count()` and `distinct()`: Number and isolate unique observations.
 
 .pull-left[
+`count()`: number of observations.
+
 ```{r count}
 starwars %>% count(species)
 ```
 ]
 .pull-right[
+`distinct()`: first unique observations.
+
 ```{r dist}
 starwars <- mutate(starwars,
                    hair_color = if_else(name == "Luke Skywalker", "blonde", hair_color))
@@ -828,7 +1002,7 @@ starwars %>%
 ---
 # distinct
 
-By default, `distinct()` .hi-medgrn[drops all other varibles].
+By default, `distinct()` .hi-medgrn[drops all other variables].
 
 If we're in a context where it makes sense to keep them (i.e. removing a few duplicated rows in a panel dataset), set `.keep_all = T`:
 
@@ -1122,8 +1296,8 @@ flights_9_10 <- filter(flights, month == 9 & day == 10) %>%
 
 
 weather_close <-  left_join(weather_sub, flights_9_10,
-            by = join_by(year, month, day, # variables to join on 
-                         closest(hour <= dep_num)         )) %>% # condition to join on
+            by = join_by(year, month, day, # variables to join on #<<
+                         closest(hour <= dep_num)         )) %>% # condition to join on #<<
   arrange(tailnum) # bring the matches to the top
 ```
 
@@ -1167,10 +1341,10 @@ weather_close <-
 ---
 # join_by()
 
-Dangit we *still* have too many rows
+Dang, we *still* have too many rows
 
   * `weather_dist_9_10` has `r nrow(weather_dist_9_10)` rows
-  * `weather close` has `r nrow(weather_close)`!
+  * `weather_close` has `r nrow(weather_close)`!
 
 .hi-slate[Q:] Why?
 
@@ -1314,9 +1488,9 @@ name: separate
 
 # 3)  Separate
 
-tidyr has several `separate_direction_method` functions that make it easy to separate cells in a column into multiple columns/rows, where 
+tidyr has several `separate_direction_method` functions that make it easy to separate values in a column into multiple columns/rows, where 
   * `direction` informs whether the data spread 
-    * wide (`_wider_`) or 
+    * wide (`_wider_`), or 
     * expand each cell into multiple rows (`_longer_`)
   * `method` instructs the way to split a cell:
     * `delim` to split on a delimiter (i.e. "." or "/")
