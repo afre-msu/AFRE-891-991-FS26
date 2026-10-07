@@ -1,0 +1,1103 @@
+---
+title: "Lecture 6: Data Acquisition - Scraping Dynamic Websites"
+author: "James Sears* <br> AFRE 891/991 FS 26 <br> Michigan State University"
+date: ".small[<br> *Parts of these slides are adapted from [“Data Science for Economists”](https://github.com/uo-ec607/lectures) by Grant McDermott.]"
+
+      
+output:
+  xaringan::moon_reader:
+    css: [msu-default.css, msu-metropolis.css, metropolis-fonts]
+    lib_dir: libs
+    self_contained: true
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      highlightSpans: true
+      countIncrementalSlides: false
+      fig_caption: true
+
+header-includes:
+  -\usepackage{amsmath}
+---
+
+```{css, echo=FALSE}
+# CSS for including pauses in printed PDF output (see bottom of lecture)
+@media print {
+  .has-continuation {
+    display: block !important;
+  }
+}
+.remark-code-line {
+  font-size: 95%;
+}
+.small {
+  font-size: 75%;
+}
+.scroll-output-full {
+  height: 90%;
+  overflow-y: scroll;
+}
+.scroll-output-75 {
+  height: 75%;
+  overflow-y: scroll;
+}
+```
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+library(knitr)
+library(fontawesome)
+knitr::opts_chunk$set(
+	fig.align = "center",
+	cache = FALSE,
+	dpi = 300,
+  warning = F,
+  message = F,
+	fig.height = 5,
+	out.width = "80%"
+)
+```
+
+# Table of Contents
+
+1. [Prologue](#prologue)
+
+2. [Scraping Dynamic Websites](#dynamic)
+
+---
+class: inverse, middle
+name: prologue
+
+# Prologue
+
+
+---
+# Packages for Today
+
+Today we'll pick up with scraping dynamic, client-side websites.
+
+For this we'll need the following packages:
+
+Static:
+```{r}
+pacman::p_load(lubridate, rvest, stringr, tiydverse, tidyr)
+```
+
+and for dynamic scraping:
+
+```{r}
+pacman::p_load(chromote, selenider)
+```
+  
+---
+class: inverse, middle
+name: dynamic
+
+# Scraping Dynamic Websites
+
+---
+# Dynamic Websites
+
+.hi-medgrn[Dynamic client-side websites] are those are rendered dynamically and require .hi-medgrn[interaction] in order to obtain desired information.
+
+While .hi-slate[rvest] can help us retrieve urls and element contents, it can't interact with .hi-purple[dynamically-generated or interactive] websites.
+
+--
+
+To do that, we're going to take advantage of .hi-blue[browser automation] methods.
+
+
+---
+# Browser Automation
+
+The main idea behind browser automation is this:
+
+  > If a website requires pointing/clicking/typing to reveal the contents we want, why not have software "drive" a browser for us?
+  
+--
+
+.pull-left[.hi-medgrn.center[Old Approach: RSelenium]
+  * R bindings for the Selenium webdriver
+  * Requires some additional software (i.e. Docker)
+  * Additional steps to get it working with Mac OS X
+]
+--
+.pull-right[
+.hi-purple.center.underline[New Approach: selenider]
+  * Uses .hi-slate[chromote] or Selenium automation tools to drive a Chrome browser
+  * Syntax more closely matches tidyverse
+  * Can't do some more complex things yet (i.e. click-and-hold, click a point)
+]
+
+---
+# rvest vs. Selenider
+
+As websites are increasingly moving toward server-side with site protection protocols, dynamic scraping methods are becoming increasingly necessary.
+
+As a result, .hi-slate[rvest] has been expanding into [methods for dynamic web scraping](https://rvest.tidyverse.org/reference/LiveHTML.html). 
+
+However, these methods are still experimental/being developed, whereas .hi-slate[selenider] is currently much more powerful - so we'll be focusing on .hi-slate[selenider]  methods.
+
+
+
+---
+
+# Application: Traverse City Properties
+
+Let's work through an example of an interactive workflow for .hi-medgrn[property characteristics and tax info in Traverse City].
+
+Suppose, hypothetically, that you just came into a hefty inheritance. You've decided the best course of action is to blow it all on a nice new place up north in Traverse City.
+
+---
+
+# Application: Traverse City Properties
+
+After a little time scrolling real estate websites, you find a nice candidate:
+
+
+.center[
+```{r, echo=F, out.width="800"}
+include_graphics("images/wrightwood.png")
+```
+]
+
+---
+
+# Application: Traverse City Properties
+
+While you can find a decent amount of property info on the real estate site's page, you want to make sure that this would be a "responsible" purchase by verifying the tax assessed value and school district.
+
+
+
+
+
+So, you navigate to the [Grand Traverse County Parcel Info Website](https://maps.grandtraverse.org/propertysearch.asp) to see if you can find the info.
+
+
+.center[
+```{r, echo=F, out.width="450"}
+include_graphics("images/gtc_pi.png")
+```
+]
+
+
+---
+
+# Application: Traverse City Properties
+
+After searching for the address, you find a little bit of information, including the .hi-medgrn[parcel number (APN)]. 
+
+
+
+.center[
+```{r, echo=F, out.width="800"}
+include_graphics("images/gtc_pi_apn.png")
+```
+]
+
+You recall that Grand Traverse City has a [Parcel Map Viewer Website](https://grand-traverse.maps.arcgis.com/apps/webappviewer/index.html?id=1f27e1d5c8bc4d8ea91e000305a8b6eb) that has a search by APN feature and contains a lot of information - including school district and property tax values!
+
+---
+
+# Application: Traverse City Properties
+
+So, you navigate over to the [Parcel Map Viewer Website](https://grand-traverse.maps.arcgis.com/apps/webappviewer/index.html?id=1f27e1d5c8bc4d8ea91e000305a8b6eb):
+
+.center[
+```{r, echo=F, out.width="800"}
+include_graphics("images/gtc_pv.png")
+```
+  ]
+
+---
+
+# Application: Traverse City Properties
+
+After checking the "I agree" box and clicking "OK", you click the dropdown to change the search type to "Parcel by ID", input the APN, and hit search.
+
+
+.center[
+```{r, echo=F, out.width="800"}
+include_graphics("images/gtc_pv_searchtype.png")
+```
+  ]
+
+
+---
+
+# Application: Traverse City Properties
+
+This zooms you to the parcel shape *and* pulls up a ton of info, which includes the school district and current assessed/taxable home value!
+
+
+.center[
+```{r, echo=F, out.width="650"}
+include_graphics("images/gtc_pv_info.png")
+```
+  ]
+
+---
+
+# Application: Traverse City Properties
+
+Taking a step back, what is the workflow to go *from* an address *to* the displayed info on the parcel viewer map app?
+
+1\. Find the address' APN using the Property Info Site
+--
+
+  * Plug in the street number
+--
+
+  * Type the street address and select the autocomplete option
+--
+
+  * Hit the search button
+--
+
+* Wait for the page to load, then copy the APN
+--
+
+
+2\. Find the property info for that APN on the Map Viewer
+--
+
+  * Check the "I agree" box and click OK button
+--
+
+  * Click the search dropdown and select "Parcel by ID"
+--
+
+  * Enter the parcel's APN and click search button
+--
+
+  * Copy the info that pops up in the window
+
+
+
+---
+# Launch Automated Session
+
+First, we need to .hi-medgrn[initiate an automated browser session] with `selenider_session()`.<sup>2</sup>
+
+```{r}
+session <- selenider_session(
+  browser = "chrome", # browser to drive
+  session = "chromote", # set backend to chromote
+  timeout = 10 # set timeout to 10 sec
+)
+```
+
+--
+
+We've now created a .hi-blue[local session]
+  * Accessed anywhere in a given script/RMarkdown file
+  * Closes automatically when the script/file finishes
+  * If started within a function, closes when the function is done running
+
+.footnote[<sup>2</sup> The full list of .hi-slate[selenider] functions can be found [here](https://ashbythorpe.github.io/selenider/reference/index.html)]
+
+---
+# View the Session
+
+If you want to  .hi-blue[view the browser session], we need to add the argument
+
+.center[`options = chromote_options(headless = F)`]
+
+Which will open the session in your Chrome browser so you can watch it in action!
+
+```{r, eval = F}
+session <- selenider_session(
+  browser = "chrome", # browser to drive
+  options = chromote_options(headless = F), # view the session #<<
+  "chromote", # set backend to chromote
+  timeout = 10 # set timeout before error to 10 sec
+)
+```
+
+---
+# 1. Navigate to Property Info Site
+
+Let's start by navigating to the [Grand Traverse County Parcel Info Website](https://maps.grandtraverse.org/propertysearch.asp)
+
+  * `open_url("URL")`
+
+
+```{r}
+open_url("https://maps.grandtraverse.org/propertysearch.asp")
+Sys.sleep(5)
+```
+
+---
+# 1. Navigate to Property Info Site
+
+
+Check that we ended up at the desired url:
+
+```{r}
+current_url()
+```
+
+---
+#  Global Functions
+
+Other actions that apply globally to the entire page:
+
+| Function | Task |
+| -------  | -----|
+| `open_url()` | navigate to the indicated url |
+| `current_url()` | get the current url |
+| `get_page_source()` | get the page's HTML|
+| `back(), forward()` | navigate forward or back|
+| `reload(), refresh()` | reload the current page|
+| `take_screenshot()` | take screenshot of current image|
+| `execute_js_fn(), execute_js_expr()` | execute a JavaScript function |
+
+
+
+---
+# Selection Functions
+
+Some additional selection functions:
+
+| Function | Task |
+| -------  | -----|
+| `s(), ss()` | select HTML elements (without specifying the session)|
+| `find_element()` | find a single HTML child element (yields a `selenider-element` object) |
+| `find_elements()` | find multiple HTML child elements (yields a `selenider-elements` object) |
+| `elem_filter(), elem_find()` | extract a subset of HTML elements|
+
+---
+# Selection Functions
+
+Hold up James, you're telling me that there are .hi-medgrn[six] different functions?? Which should I be using?
+
+--
+
+.hi-blue[Thoughts:]
+
+* `s()` is equivalent to `session %>% find_element()`
+* `ss()` is equivalent to `session %>% find_elements()`
+--
+
+* `s()/find_element()` and `ss()/find_elements()` let you search by
+  * CSS Selector (`css`)
+  * XPath (`xpath`)
+  * element ID (`id`), class (`class_name`), name (`name`)
+--
+
+* `elem_find()` and `elem_filter()` let us search by .hi-purple[conditions]
+  * i.e. has certain text, has an attribute with a certain value, is visible, has a certain number of elements
+  * We'll see helper functions that will help us out with this in a bit
+
+
+---
+# Element Properties
+
+And functions for obtaining element properties
+
+| Function | Task |
+| -------  | -----|
+| `elem_attr(), elem_attrs(), elem_value()` | Get attributes of an element|
+| `elem_css_property()` | Get a CSS property of an element|
+| `elem_name()` | Get the tag name of an element |
+| `elem_size(), length(selenider-elements)` | get the number of elements in a collection|
+| `elem_text()` | Get the text inside an element |
+| `elem_equal()` | Test if two elements are equal|
+
+---
+# Actions
+
+| Function | Task |
+| -------  | -----|
+| `elem_click(), elem_double_click(), elem_right_click()` | Click on an element|
+| `elem_hover(), elem_focus` | Hover over an element|
+| `elem_scroll_to()` | Scroll to an element |
+| `elem_select()` |Select an HTML element|
+| `elem_set_value(), elem_send_keys(), elem_clear_value()` | Set the value of an input |
+| `elem_submit()` | Submit an element|
+| `keys` | list of special keys |
+
+
+---
+# 1. Navigate the Property Info Site
+
+Now let's think about the steps and functions need to .hi-medgrn[enter the address information] and then click hi-medgrn[Search] to try and track down the APN.
+
+.hi-slate[Involved Steps:]
+  * .hi-blue[Find] the Address Number field (`find_element()`)
+  * .hi-red[Type] the address number into the field (`elem_send_keys()`)
+  * .hi-blue[Find] the Street Name field (`find_element()`)
+  * .hi-red[Type] the street name into the field (`elem_send_keys()`)
+  * .hi-purple[Click] the "Search" button (`find_element(), elem_click()`)
+
+---
+# Fill the Address Number Field
+
+.center[
+```{r, echo=F, out.width="700"}
+include_graphics("images/gtc_pi_addnum.png")
+```
+]
+
+--
+
+```{r}
+session %>%
+  find_element(id = "PROPADDNUM_id") %>%
+  elem_send_keys("16768")
+```
+
+
+---
+# Fill the Street Name Field
+
+.center[
+```{r, echo=F, out.width="500"}
+include_graphics("images/gtc_pi_street.png")
+```
+]
+
+--
+
+```{r}
+session %>%
+  find_element(id = "streetname_id") %>%
+  elem_send_keys("Wrightwood Terrace Drive")
+```
+
+---
+# Click the Search Button
+
+
+.center[
+```{r, echo=F, out.width="500"}
+include_graphics("images/gtc_pi_search.png")
+```
+]
+
+--
+
+```{r}
+session %>%
+  find_element(name = "submitme") %>%
+  elem_click()
+Sys.sleep(5)
+```
+
+
+---
+# Grab the APN
+
+.center[
+```{r, echo=F, out.width="500"}
+include_graphics("images/gtc_pi_apn_sel.png")
+```
+]
+
+--
+
+```{r}
+apn <- session %>%
+  find_element("a.PDBlistlink") %>%
+  elem_text()
+apn
+```
+
+
+---
+# 2. Navigate Map Viewer
+
+Now we'll .hi-medgrn[click the "I agree to the above terms and conditions" checkbox] and then .hi-medgrn[click OK] to launch the app.
+
+.hi-slate[Involved Steps:]
+  * .hi-blue[Select] the checkbox element by its CSS selector (`find_element()`)
+  * .hi-medgrn[Scroll to] the box (`elem_scroll_to()`)
+  * .hi-purple[Click] the box (`elem_click()`)
+  * Repeat to select/scroll to/click the OK button
+
+
+---
+# 2. Navigate the Map Viewer
+
+
+Navigate to the main [Tax Mapping Viewer page](https://ingham-equalization.rsgis.msu.edu/) and launch the viewer
+
+
+```{r}
+  open_url("https://grand-traverse.maps.arcgis.com/apps/webappviewer/index.html?id=1f27e1d5c8bc4d8ea91e000305a8b6eb/")
+Sys.sleep(5)
+```
+
+---
+# 2. Navigate the Map Viewer
+
+Check that we ended up at the desired url:
+
+```{r}
+current_url()
+```
+---
+
+# Click the "I Agree" Check Box
+
+.pull-left.font90[
+```{r}
+session %>%
+  find_element("#jimu_dijit_CheckBox_0") %>%
+  elem_text()
+
+session %>%
+   find_element("div.checkbox")  %>%
+  elem_scroll_to() %>% # move the cursor to the button
+  elem_click()
+```
+]
+.pull-right[
+```{r, echo=F, out.width="500"}
+include_graphics("images/gtc_pv_check.png")
+```
+]
+
+---
+# Click the "OK" Button
+.pull-left.font90[
+```{r}
+# Alternative approach: the footer contains both the check box and the OK button
+session %>%
+  find_element("div.footer") %>%
+  find_element("button")  %>%
+  elem_scroll_to() %>% # move the cursor to the button
+  elem_click()
+Sys.sleep(5)
+```
+]
+.pull-right[
+```{r, echo=F, out.width="500"}
+include_graphics("images/gtc_pv_check.png")
+```
+]
+
+---
+# Choose the "Parcel by ID" Search
+```{r, echo=F, out.width="500"}
+include_graphics("images/gtc_pv_searchtype2.png")
+```
+
+```{r}
+# Show the search options
+session %>%
+  find_element("#esri_dijit_Search_0_menu_button > span.searchIcon.esri-icon-down-arrow") %>%
+  elem_click()
+
+# select the fifth list element
+session %>%
+  find_element("#esri_dijit_Search_0 > div > div.searchMenu.sourcesMenu > ul > li:nth-child(5)") %>%
+  elem_click()
+```
+
+
+
+
+
+---
+# Type in the APN
+
+```{r, echo=F, out.width="600"}
+include_graphics("images/gtc_pv_searchtype3.png")
+```
+
+```{r}
+# Show the search options
+session %>%
+  find_element("#esri_dijit_Search_0_input") %>%
+  elem_send_keys(apn)
+```
+
+
+
+---
+# Press Search Button
+
+```{r, echo=F, out.width="600"}
+include_graphics("images/gtc_pv_search_btn.png")
+```
+
+```{r}
+# Show the search options
+session %>%
+  find_element("div.searchBtn.searchSubmit.lastFocusNode") %>%
+  elem_click()
+Sys.sleep(5)
+```
+
+
+
+---
+# Get the Resulting Info Table
+
+Here the info window contains several HTML Tables: 
+
+```{r, echo=F, out.width="600"}
+include_graphics("images/gtc_pv_tab.png")
+```
+
+---
+# Get the Resulting Info Table
+
+Here the info window contains several HTML Tables: 
+
+```{r}
+session %>%
+  find_elements("table") 
+```
+
+
+---
+# Get the Resulting Info Table
+
+
+We can also use .hi-medgrn[condition functions] to help with selection.
+.small[
+| Function | Task |
+| -------  | -----|
+| `has_text(), has_exact_text()` | has text that partially or fully matches |
+| `has_attr(), attr_contains(), has_value()` | does the attribute match a value |
+| `has_css_property()` | does an element's CSS property match a value (class, id, title, etc.)|
+| `has_name()` | does an element have a tag name |
+| `has_length(), has_size(), has_at_least()` | does a collection have a certain number of elements |
+| `is_present(), is_in_dom(), is_absent()` | does an element exist|
+| `is_visible(), is_displayed(), is_hidden(), is_invisible()` | is an element visible|
+]
+
+---
+# Get the Resulting Info Table
+
+We can also use .hi-medgrn[condition functions] to help with selection.
+  * `find_elements()` to yield a `selenider_element`
+  * `elem_find()` to extract a specific subset of HTML elements
+    * `has_text()` to grab the element with the text "Search"
+  * `elem_click()` to click the selected button.
+  
+```{r}
+session %>% find_elements("table") %>%
+  elem_find(has_text("Site Address")) %>%
+  elem_text()
+```
+
+---
+# Get the Resulting Info Table
+
+.hi-slate[selenider] doesn't have built-in methods for reading HTML tables as data frames like we could in .hi-slate[rvest]...
+
+... but we've already queried the website and had it populate the HTML with the info we need, so let's just pull the current HTML and use .hi-slate[rvest] methods as before!
+
+```{r}
+get_page_source() %>%
+  rvest::html_elements("table") 
+```
+
+---
+# Get the Resulting Info Table
+
+We can now grab the table that we want (2nd one in the nodeset). We can do this by
+--
+
+.pull-left[
+.center.hi-medgrn[Full Selector]
+
+```{r}
+get_page_source() %>%
+  rvest::html_element("div.mainSection  > div:nth-child(3) > figure:nth-child(2) > table") %>%
+  rvest::html_table()
+```
+]
+--
+.pull-left[
+.center.hi-blue[Formatting all tables at once]
+
+.font90[Pass the full nodeset through `html_table()` and use indexing]
+
+```{r}
+tabs <- get_page_source() %>%
+  rvest::html_elements("table") %>%
+  html_table()
+tabs[[2]]
+```
+]
+
+
+---
+# Get the Resulting Info Table
+
+
+```{r, eval = T}
+dplyr::select(tabs[[2]], X1, X2) %>% 
+  dplyr::filter(str_detect(X1, "Mailing|School District|Value"))
+```
+
+---
+# EX 2: Boston Marathon
+
+Now that we've learned how to use dynamic scraping methods with .hi-slate[selenider], let's go back to our initial motivation: scraping [2026 Boston Marathon results](https://results.baa.org/2026/?pidp=start)
+
+```{r, echo=F}
+include_graphics("images/boston_search.png")
+```
+
+---
+# Force Close the Session
+
+Before beginning, I find it helpful to .hi-red[force quit the old session] and .hi-blue[start a new one]. This is especially helpful if it's been a while since the last actions and the driver's "stalled out" and become inoperable.
+
+```{r}
+# Force the existing session to close
+chromote:::set_default_chromote_object(chromote::Chromote$new()) #<<
+
+# start a new session
+session <- selenider_session(
+ options = chromote_options(headless = F), # headless = F to view the session
+  "chromote", # set backend to chromote
+  timeout = 10 # set timeout to 10 sec
+)
+Sys.sleep(5)
+```
+
+
+---
+# Back to Boston Marathon
+
+First, navigate to the [2026 Boston Marathon results search page](https://results.baa.org/2026/?pidp=start)
+```{r, eval = F}
+open_url("https://results.baa.org/2026/?pidp=start")
+```
+
+--
+
+Dangit, site protections *again*.
+
+```{r, echo=F, out.width = "700"}
+include_graphics("images/site_403.png")
+```
+
+---
+# Changing User Agent in selenider
+
+As before, we can get around this by .hi-medgrn[changing the user agent].
+
+This time, it's slightly more complicated, as we need to modify settings of the chromote driver
+  
+  * Adding a `$` after `session$driver` shows the immense amount of *stuff* we can look at/change
+  * Here we want to modify the `setUserAgentOverride()` buried in the `Network`
+    * Sole argument `userAgent` is the user agent we want to use (same as last time)
+
+```{r}
+session$driver$Network$setUserAgentOverride(
+    userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36"
+)
+```
+
+---
+# (Back to) Back to Boston Marathon
+
+*Now* try to navigate to the [2026 Boston Marathon results search page](https://results.baa.org/2026/?pidp=start)
+
+```{r}
+open_url("https://results.baa.org/2026/?pidp=start")
+Sys.sleep(5)
+```
+
+```{r, echo=F}
+include_graphics("images/boston_search.png")
+```
+
+And we're back in business!
+
+
+
+---
+# Back to Boston Marathon
+
+Let's suppose we want to see results for .hi-medgrn[every participant in Des Linden's age group (Women 40-44)]. 
+
+
+.hi-medgrn[Workflow:]
+* Start a .hi-slate[selenider] session (done)
+* Navigate to the [2026 Boston Marathon results search page](https://results.baa.org/2026/?pidp=start) (done)
+* Select the "Result Lists" form 
+* Use the "Gender" select element to select the "Women" option
+* Use the "Age Group" element to select the "40-44" option
+* Use the "Results/Page" dropdown to select 50
+
+
+---
+# Select the Form
+
+The first step before filling out the form is to identify the form that we want.
+
+We *could* navigate an incredibly convoluted, highly-nested HTML structure, *or* we could
+
+  * Retrieve the source code and use .hi-slate[rvest] methods to identify a way to select the form we want
+
+```{r}
+get_page_source() %>%
+  html_elements("form")
+```
+
+---
+# Select the Form
+
+Now we can use the `name` argument in `find_element()` to grab the "Results List" form.
+
+```{r}
+find_element(session, name = "form_lists_default") 
+```
+--
+
+Or the `id` argument (conveniently both are the same here)
+
+```{r}
+find_element(session, id = "form_lists_default") 
+```
+---
+# Form Fields
+
+.hi-slate[rvest]'s `html_form()` makes it easy to see the form's fields 
+
+.font80.pull-left[
+```{r}
+get_page_source() %>%
+  html_elements("form#form_lists_default") %>%
+  html_form()
+```
+]
+.pull-right[
+Here we've got:
+  * 3 .hi-red[hidden] fields
+  * 5 .hi-pink[select] fields that have .hi-pink[dropdown menus]
+  * 1 .hi-purple[button] to execute the search
+    ]
+
+
+---
+# Form Fields
+
+Inspecting the HTML shows the same, albeit highly nested
+
+```{r, echo=F, out.width = "750"}
+include_graphics("images/boston_search_html.png")
+```
+
+---
+# Interacting with Form Fields
+
+Within the form, we want to interact with the `select` elements. To do this, we will
+
+  1. Find the `select` element we're trying to fill in with `find_element()`
+  2. Find the select's `option` element that we want to select
+  3. Select it with `elem_select()`
+
+---
+# Filling Form Fields
+
+Let's start by setting the gender to Female.
+
+I find the easiest way to identify the form options to be to 
+--
+.pull-left[
+Right-click and "Inspect"
+
+```{r, echo=F}
+include_graphics("images/select_gender.png")
+```
+]
+--
+.pull-right[
+Or to look at the options with .hi-slate[rvest]:
+
+```{r}
+get_page_source() %>%
+  html_element("#default-lists-sex") %>%
+  html_elements("option")
+```
+]
+
+---
+# Set Option Value
+
+To set the option, use `elem_select()` on the desired option. 
+
+  * Here we want a value of "W"
+  
+There are several different ways to do this:
+
+--
+
+.hi-blue[1\. XPATH `"//*/option[@value = \'VAL\']"`]
+  * finds the `option` element with a `value` of `VAL`
+  
+```{r}
+find_element(session, name = "search[sex]") %>% # isolate the select field
+  find_element(xpath = "//*/option[@value = \'W\']") %>% #<<
+  elem_select()
+```
+
+---
+# Set Option Value
+
+Next, let's set the age group to 40-44 (third option) by its position:
+  
+
+.hi-medgrn[2\. XPATH `"//*[@id = \"VALUE\"]/option[N]"`]
+  * Finds the `N`<sup>th</sup> option for the element with an `id` of `VALUE`
+    * Here `N = 3`, `id = default-lists-age_class`
+    
+```{r}
+find_element(session, name = "search[age_class]") %>%
+  find_element(xpath = "//*[@id=\"default-lists-age_class\"]/option[3]") %>% #<<
+  elem_select()
+```
+
+---
+# Set Option Value
+
+Next, let's set the age group to 40-44 (third option)
+  
+
+.hi-medgrn[3\. CSS `"option:nth-child(N)"`]
+  * Finds the `N`th option for the element with an `id` of `VALUE`
+  
+```{r}
+find_element(session, css = "#default-lists-age_class") %>% # isolate the select field
+  find_element(css = "option:nth-child(3)") %>% #<<
+  elem_select()
+```
+
+
+---
+# Back to Boston Marathon
+
+If we're running headless, we can verify that our selection worked by viewing the age class search element
+  * Note which option now shows as "selected"
+.pull-left.font90[
+```{r}
+find_element(session, name = "form_lists_default") %>%
+  find_element(name = "search[age_class]")
+```
+]
+.pull-right[
+```{r, echo=F}
+include_graphics("images/select_age2.png")
+```
+]
+
+---
+# Set Option Value
+
+Or combine the selectors together following `#ID > option:nth-child(N)`  
+  
+```{r}
+find_element(session, 
+  css = "#default-lists-age_class > option:nth-child(3)") %>% #<<
+elem_select()
+```
+
+---
+# Set Option Value
+
+Last, let's show 50 results per page
+
+
+.hi-medgrn[4\. `elem_select(value = "VAL", reset_other = T)`]
+  * Select the option with a `value` of `"VAL"`
+  
+```{r}
+find_element(session, "#default-num_results") %>% # grab the select
+  elem_select(value = "50") #<<
+```
+
+
+---
+# Back to Boston Marathon
+
+Finally, find and click the "Show Results" button!
+
+```{r}
+find_element(session, name = "form_lists_default") %>%
+  find_element(name = "submit") %>%
+  elem_click()
+Sys.sleep(5)
+```
+
+```{r, echo=F}
+include_graphics("images/click_button.png")
+```
+
+
+---
+# Back to Boston Marathon
+
+Our page has now been populated with the matching search results!
+
+Retrieve the page's current HTML with `get_page_source()`, and then we can use .hi-slate[rvest] methods to retrieve the text we want.
+
+```{r}
+Sys.sleep(5)
+res_page1 <- get_page_source() %>%
+  html_elements("div.row") %>%
+  html_elements("li.list-group-item.row") %>%
+  html_text2()
+head(res_page1)
+```
+---
+# Back to Boston Marathon
+
+**Challenge:** format the page 1 results as a dataframe, splitting into all 9 columns
+  * Back to data wrangling/cleaning!
+  * _hint:_ use `separate_wider_delim()`
+
+
+---
+# Back to Boston Marathon
+
+**Challenge:** format the page 1 results as a dataframe, splitting into all 9 columns
+  * Back to data wrangling/cleaning!
+  * _hint:_ use `separate_wider_delim()`
+
+---
+# Back to Boston Marathon
+
+```{r}
+page1_df <- data.frame(string = res_page1[2:length(res_page1)]) %>%
+  separate_wider_delim(cols = string, delim = "\n",
+                       names = c("place_overall", "place_gender", "place_division", "name", "team_dup", "team", "bib_dup", "bib", "half_dup", "half", "finish_net_dup", "finish_net", "finish_gun_dup", "finish_gun")) %>%
+  dplyr::select(-ends_with("dup"))
+
+head(page1_df)
+```
+
+
+
+---
+# Scraping Dynamic/Interactive Websites
+
+Methods for scraping dynamic or interactive websites opens up a huge range of possibilities.
+  * Iterative process of
+    * Interact with the website and its elements
+    * Extract element contents as with static sites
+  * Interactive workflows are generally more complex, so worth thinking about tradeoff between just brute forcing vs. coding up a scraping routine
+
+Things will also get exponentially easier once we get through our programming lecture, which will allow you to automate repeated scraping tasks
+
+---
+
+# Table of Contents
+
+1. [Prologue](#prologue)
+
+2. [Scraping Dynamic Websites](#dynamic)
+
+
+```{r gen_pdf, include = FALSE, cache = FALSE, eval = FALSE}
+infile = list.files(pattern = 'Dynamic.html')
+pagedown::chrome_print(input = infile, timeout = 500)
+```
