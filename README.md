@@ -97,7 +97,7 @@ This work is licensed under a
  * Scraping Static Server-Side Rendered Websites
  * Interacting with Static Websites
 
-Part 2  ([html]()) ([pdf]())
+Part 2  ([html](https://github.com/afre-msu/AFRE-891-991-FS26/blob/e6171db1bc6f2d366d4f3f6e465ded26ff059ae2/Lecture%20Slides/06-Acquisition/06-Acquisition-Dynamic.html)) ([pdf](https://github.com/afre-msu/AFRE-891-991-FS26/blob/e6171db1bc6f2d366d4f3f6e465ded26ff059ae2/Lecture%20Slides/06-Acquisition/06-Acquisition-Dynamic.pdf))
  * Scraping Dynamic Client-Side Rendered Websites
 
 Part 3 ([html]()) ([pdf]())
