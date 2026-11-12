@@ -135,16 +135,18 @@ Part 3 ([html](https://github.com/afre-msu/AFRE-891-991-FS26/blob/4ebeca37dd782a
  * Event Study and Dynamic Treatment Effects
 
 
- [**Lecture 9: Synthetic Control Methods**]()
+ [**Lecture 9: Synthetic Control Methods**](https://github.com/afre-msu/AFRE-891-991-FS26/tree/6c920ba23e745237e8a45714c6b985708527a14b/Lecture%20Slides/09-Synthetic)
 
 
- Part 1 ([html]()) ([pdf]())
+ Part 1 ([html](https://github.com/afre-msu/AFRE-891-991-FS26/blob/6c920ba23e745237e8a45714c6b985708527a14b/Lecture%20Slides/09-Synthetic/09-Synthetic-Pt1.html)) ([pdf](https://github.com/afre-msu/AFRE-891-991-FS26/blob/6c920ba23e745237e8a45714c6b985708527a14b/Lecture%20Slides/09-Synthetic/09-Synthetic-Pt1.pdf))
  * Matching
  * Canonical Synthetic Control Method (SCM)
 
- Part 2  ([html]()) ([pdf]())
+ Part 2  ([html](https://github.com/afre-msu/AFRE-891-991-FS26/blob/6c920ba23e745237e8a45714c6b985708527a14b/Lecture%20Slides/09-Synthetic/09-Synthetic-Pt2.html)) ([pdf](https://github.com/afre-msu/AFRE-891-991-FS26/blob/6c920ba23e745237e8a45714c6b985708527a14b/Lecture%20Slides/09-Synthetic/09-Synthetic-Pt2.pdf))
  * Synthetic Difference-in-Differences
  * Partially Pooled SCM
+ * Synthetic Control Prediction Intervals
+ * SCM Assumptions
 
 
  [**Lecture 10: Spatial Data**]()
