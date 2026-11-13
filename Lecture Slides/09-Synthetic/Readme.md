@@ -6,6 +6,8 @@ This folder contains materials for Lecture 9 on Synthetic Control Methods.
 Topics include
 
   * Fundamental problem of causal inference
+  * Canonical Synthetic Control Method
+   * Impact of Optimization Windows and Scaling
   * Matching
   * Synthetic Differences-in-Differences
   * Partially pooled SCM
