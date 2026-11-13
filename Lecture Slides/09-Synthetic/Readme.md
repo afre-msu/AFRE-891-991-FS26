@@ -9,3 +9,4 @@ Topics include
   * Matching
   * Synthetic Differences-in-Differences
   * Partially pooled SCM
+  * Synthetic Control Prediction Intervals
