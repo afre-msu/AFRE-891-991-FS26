@@ -1,0 +1,525 @@
+---
+title: "Lecture 9: Synthetic Control Methods: Impacts of Optimization Windows and Variable Scale"
+author: "James Sears* <br> AFRE 891/991 FS 26 <br> Michigan State University"
+date: ""
+
+      
+output:
+  xaringan::moon_reader:
+    css: [msu-default.css, msu-metropolis.css, metropolis-fonts]
+    lib_dir: libs
+    latex_engine: lualatex
+    self_contained: true
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      highlightSpans: true
+      countIncrementalSlides: false
+      fig_caption: true
+
+header-includes:
+  -\usepackage{amsmath}
+---
+
+```{css, echo=FALSE}
+# CSS for including pauses in printed PDF output (see bottom of lecture)
+@media print {
+  .has-continuation {
+    display: block !important;
+  }
+}
+.remark-code-line {
+  font-size: 95%;
+}
+.small {
+  font-size: 75%;
+}
+.scroll-output-full {
+  height: 90%;
+  overflow-y: scroll;
+}
+.scroll-output-75 {
+  height: 75%;
+  overflow-y: scroll;
+}
+```
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE, scipen = 999)
+library(knitr)
+library(fontawesome)
+
+# define colors
+red_pink <- "#e64173"
+turquoise <- "#20B2AA"
+orange <- "#FFA500"
+red <- "#fb6107"
+blue <- "#3b3b9a"
+green <- "#8bb174"
+grey_light <- "grey70"
+grey_mid <- "grey50"
+grey_dark <- "grey20"
+purple <- "#6A5ACD"
+slate <- "#314f4f"
+
+knitr::opts_chunk$set(
+	fig.align = "center",
+	cache = FALSE,
+	dpi = 300,
+  warning = F,
+  message = F,
+	fig.height = 5,
+	out.width = "80%"
+)
+```
+
+# Table of Contents
+
+1. [Optimization Window](#optim)
+1. [Impacts of Scale](#scale)
+
+---
+# Prologue
+
+Packages we'll use today:
+
+
+```{r}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(fixest,  tidysynth, tidyverse)
+```
+
+Let's load in the German reunification data as well:
+
+```{r}
+deu <- haven::read_dta("data/repgermany.dta") %>%
+    mutate_at(vars(index, year, gdp, infrate, trade, schooling,
+                   invest60, invest70, invest80,
+                   industry),
+               as.numeric) %>%
+    mutate_at(vars(country), as.character)
+```
+
+---
+# German Reunification
+
+Let's set up our initial synthetic control to replicate [Abadie, Diamond, and Hainmueller (2010)](https://doi.org/10.1111/ajps.12116)
+
+.font80[
+```{r}
+synth <- deu %>%
+    synthetic_control(
+      outcome = gdp, # outcome
+      unit = country, # unit identifier
+      time = year, # time identifier
+      i_unit = "West Germany", # treated unit
+      i_time = 1990, # treatment year
+      generate_placebos = T # whether to generate placebos for inference
+    ) %>%
+  generate_predictor(time_window = 1981:1990, 
+                     gdp_81_90 = mean(gdp, na.rm = T),
+                     trade_81_90 = mean(trade, na.rm = T), 
+                     infrate_81_90 = mean(infrate, na.rm = T)
+  ) %>%
+  generate_predictor(time_window = 1971:1980, 
+                     industry_71_80 = mean(industry, na.rm = T)) %>% 
+  generate_predictor(time_window =c(1970, 1975), 
+                     schooling_70_75 = mean(schooling, na.rm = T)) %>% 
+  generate_predictor(time_window = 1980,invest_80 = invest80)
+```
+]
+
+---
+class: inverse, middle
+name: optim
+
+# Optimization Window
+
+
+---
+# Optimization Window
+
+What is the `optimization_window` argument of `generate_weights()` doing if we manually set the time for our predictors?
+
+--
+
+.hi-slate[A: tidysynth] follows Abadie, Diamond, and Hainmueller (2010) and chooses weights $\nu \in V,\omega \in W$ to .hi-purple[minimize MSPE in the pre-intervention period].
+
+--
+
+By default it does this for the .hi-medgrn[full pre-intervention period] $t= 1,...,\color{#8bb174}{T_0}$:
+
+$$\min_{V,W} MSPE_{t=1}^{\color{#8bb174}{T_0}} = \frac{1}{T_0}\sum\limits_{t=1}^{\color{#8bb174}{T_0}} \left(Y_{1t} - \sum\limits_{j=2}^{J+1}\omega_j(V) Y_{jt}\right)^2$$
+---
+# Optimization Window
+
+
+Specifying `optimization_window` as the range $1 \leq \color{#3b3b9a}{t_s},..., \color{#fb6107}{t_e} \leq T_0$ forces only the specified time window to be used when calculating MSPE:
+
+<br>
+
+$$\min_{V,W} MSPE_{\color{#3b3b9a}{t_s}}^{\color{#fb6107}{t_e}} = \frac{1}{\color{#fb6107}{t_e} - \color{#3b3b9a}{t_s} + 1}\sum\limits_{\color{#3b3b9a}{t_s}}^{\color{#fb6107}{t_e}} \left(Y_{1t} - \sum\limits_{j=2}^{J+1}\omega_j(V) Y_{jt}\right)^2$$
+<br>
+
+* In the background of the `synth_weights()` function, this is done by filtering the data to `filter(time %in% optimization_window)`
+
+  
+---
+# Optimization Window: Application
+
+[Abadie, Diamond, and Hainmueller (2010)](https://doi.org/10.1111/ajps.12116), which we're replicating, uses the period 1981-1990 as its optimization window
+  * Use 1971-1980 as the training period
+  * Use 1981-1990 as the validation period
+  * Use predictors in 1971-1980 to build $V$ to minimize RMSPE in 1981-1990
+  * Use $V$ to choose $W$ to maximize balance in the decade right before reunification (1981-1990)
+
+---
+# Comparing: 81-90 Window
+
+```{r, echo = F}
+sc_81_90 <- synth %>%
+  generate_weights(optimization_window = 1981:1990) %>%
+  generate_control() 
+
+plot_trends(sc_81_90) +
+  scale_y_continuous(limits = c(0, 35000))
+```
+
+---
+# Comparing: 61-90 Window
+
+```{r, echo = F}
+sc_61_90 <- synth %>%
+  generate_weights() %>%
+  generate_control() 
+
+plot_trends(sc_61_90) +
+  scale_y_continuous(limits = c(0, 35000))
+```
+
+---
+# Comparing Weights: 81-90
+
+```{r, echo = F}
+sc_81_90 %>%
+  plot_weights()
+```
+
+---
+# Comparing Weights: 61-90
+```{r, echo = F}
+sc_61_90 %>%
+  plot_weights()
+```
+
+
+---
+# Comparing: Pre-Period
+ 
+
+```{r, echo = F}
+sc_path_81_90 <- grab_synthetic_control(sc_81_90) %>%
+  rename(synth_y_81_90 = synth_y) %>%
+  select(-real_y)
+sc_paths <- grab_synthetic_control(sc_61_90) %>%
+  rename(synth_y_61_90 = synth_y) %>%
+  left_join(sc_path_81_90, by = "time_unit")
+
+
+ggplot(sc_paths, aes(x = time_unit)) +
+  geom_line(aes(y = synth_y_61_90, linetype = "1961-1990")) +
+   geom_line(aes(y = synth_y_81_90, linetype = "1981-1990")) +
+  geom_line(aes(y = real_y,  linetype = "Actual West Germany"), color = "red3") +
+  scale_linetype_manual(name = "Optimization Window", values = c("1961-1990" = "dashed", "1981-1990" = "solid", "Actual West Germany" = "solid")) + 
+scale_y_continuous(name = "Per Capita GDP (PPP current USD)", limits = c(2000, 20500)) +
+  scale_x_continuous(name = NULL, limits = c(1960, 1990)) +
+  theme_minimal()
+```
+
+
+---
+# Comparing: Post-Period
+
+
+```{r, echo = F}
+sc_path_81_90 <- grab_synthetic_control(sc_81_90) %>%
+  rename(synth_y_81_90 = synth_y) %>%
+  select(-real_y)
+sc_paths <- grab_synthetic_control(sc_61_90) %>%
+  rename(synth_y_61_90 = synth_y) %>%
+  left_join(sc_path_81_90, by = "time_unit")
+
+
+ggplot(sc_paths, aes(x = time_unit)) +
+  geom_line(aes(y = synth_y_61_90, linetype = "1961-1990")) +
+   geom_line(aes(y = synth_y_81_90, linetype = "1981-1990")) +
+  geom_line(aes(y = real_y,  linetype = "Actual West Germany"), color = "red3") +
+  scale_linetype_manual(name = "Optimization Window", values = c("1961-1990" = "dashed", "1981-1990" = "solid", "Actual West Germany" = "solid")) + 
+scale_y_continuous(name = "Per Capita GDP (PPP current USD)", limits = c(20000, 35000)) +
+  scale_x_continuous(name = NULL, limits = c(1990, 2003), breaks = seq(1990, 2002, 2)) +
+  theme_minimal()
+```
+
+---
+# Punchline
+
+* Lack of "uniqueness" of synthetic controls (e.g. "local minima")
+  * Two different sets of unit/predictor weights
+  * Similar pre-treatment fit, post-treatment path
+  * Average post-treatment difference between the two SC: $7.97 (0.03% of dependent variable mean)
+  
+  
+```{r, echo = F}
+filter(sc_paths, time_unit > 1990) %>%
+  mutate(diff = synth_y_81_90 - synth_y_61_90) %>%
+  summarise(mean_gdp = mean(real_y),
+            mean_diff = mean(diff))
+```
+
+---
+class: inverse, middle
+name: scaling
+
+# Impact of Variable Scale
+
+---
+# Impact of Variable Scale
+
+
+What if we rescaled one of our variables instead?
+
+Thinking back to our objective function with *just* $Y$ and .hi-red[no other predictors:]
+
+$$\min_{V,W} MSPE_{t=1}^{{T_0}} = \frac{1}{T_0}\sum\limits_{t=1}^{{T_0}} \left(Y_{1t} - \sum\limits_{j=2}^{J+1}\omega_j(V) Y_{jt}\right)^2$$
+
+A rescaled $Y$ *shouldn't* change things, as everything is being scaled equally
+
+---
+# Impact of Variable Scale
+
+
+However, if we instead have a set of multiple predictors, then it .hi-red[should affect things]!
+
+  * Re-scaling $Y$ or $X_k$ changes its proportional representation in the overall squared difference term
+    * Ex: a squared difference of inflation rate as percent is 10000 times larger than as a proportion!
+  
+---
+# Impact of Variable Scale: Y
+
+Let's test this first re-scaling $Y$ in two ways in the .hi-red[multiple predictor case]:
+
+1. Re-scale our dependent variable in millions of dollars in GDP (instead of dollars)
+1. Standardize our dependent variable
+
+---
+# Re-scale GDP in Millions
+
+```{r}
+deu <- mutate(deu, 
+              gdp_m = gdp/1000000, #<<
+              gdp_z = (gdp - mean(gdp, na.rm = T))/sd(gdp, na.rm = T)) #<<
+```
+
+---
+# Impact of Variable Scale
+
+Generate predictors exactly as before:
+
+.pull-left[
+```{r}
+synth_m <- synthetic_control(deu, 
+      outcome = gdp_m, #<<
+      unit = country, 
+      time = year, 
+      i_unit = "West Germany",
+      i_time = 1990, 
+      generate_placebos = F
+    ) %>%
+  generate_predictor(time_window = 1981:1990, 
+                     gdp_81_90 = mean(gdp, na.rm = T),
+                     trade_81_90 = mean(trade, na.rm = T), 
+                     infrate_81_90 = mean(infrate, na.rm = T)
+  ) %>%
+  generate_predictor(time_window = 1971:1980, 
+                     industry_71_80 = mean(industry, na.rm = T)) %>% 
+  generate_predictor(time_window =c(1970, 1975), #<<
+                     schooling_70_75 = mean(schooling, na.rm = T)) %>% #<<
+  generate_predictor(time_window = 1980,
+                     invest_80 = invest80)
+```
+].pull-right[
+```{r}
+synth_z <- synthetic_control(deu, 
+      outcome = gdp_z, #<<
+      unit = country, 
+      time = year, 
+      i_unit = "West Germany",
+      i_time = 1990, 
+      generate_placebos = F
+    ) %>%
+  generate_predictor(time_window = 1981:1990, 
+                     gdp_81_90 = mean(gdp, na.rm = T),
+                     trade_81_90 = mean(trade, na.rm = T), 
+                     infrate_81_90 = mean(infrate, na.rm = T)
+  ) %>%
+  generate_predictor(time_window = 1971:1980, 
+                     industry_71_80 = mean(industry, na.rm = T)) %>% 
+  generate_predictor(time_window =c(1970, 1975), #<<
+                     schooling_70_75 = mean(schooling, na.rm = T)) %>% #<<
+  generate_predictor(time_window = 1980, 
+                     invest_80 = invest80)
+``` 
+]
+
+---
+# Impact of Variable Scale
+
+Estimate each model exactly as before:
+
+.pull-left[
+```{r}
+synth_m <-   generate_weights(synth_m, 
+                              optimization_window = 1981:1990) %>%
+  generate_control()
+```
+].pull-right[
+```{r}
+synth_z <-   generate_weights(synth_z, 
+                              optimization_window = 1981:1990) %>%
+  generate_control()
+```
+]
+
+---
+# Comparing: Unit Weights
+
+Comparing the unit weights:
+
+```{r, echo = F}
+# Unit weights
+comp_unit <- grab_unit_weights(sc_81_90) %>%
+  rename(Main = weight)
+comp_unit_m <- grab_unit_weights(synth_m) %>%
+  rename("Y Rescaled" = weight)
+comp_unit_z <- grab_unit_weights(synth_z) %>%
+  rename("Y Standardized" = weight)
+
+left_join(comp_unit, comp_unit_m) %>%
+  left_join(comp_unit_z) %>%
+  mutate(across(where(is.numeric), \(x) round(x, 2))) %>%
+  arrange(desc(Main))
+```
+---
+# Comparing: Predictor Weights
+
+Comparing the predictor weights:
+
+```{r, echo = F}
+# Time weights
+comp_pred <- grab_predictor_weights(sc_81_90) %>%
+  rename(Main = weight)
+comp_pred_m <- grab_predictor_weights(synth_m) %>%
+  rename("Y Rescaled" = weight)
+comp_pred_z <- grab_predictor_weights(synth_z) %>%
+  rename("Y Standardized" = weight)
+
+left_join(comp_pred, comp_pred_m) %>%
+  left_join(comp_pred_z) %>%
+  mutate(across(where(is.numeric), \(x) round(x, 2))) %>%
+  arrange(desc(Main))
+```
+
+  
+
+---
+# Rescale X
+
+... huh. 
+
+Okay... well What if we rescaled one of our $X$'s instead? Say, inflation rate as a percent?
+
+```{r}
+deu <- mutate(deu, inf_pct = infrate*100)
+```
+.font90[
+```{r}
+synth_x <- synthetic_control(deu, 
+      outcome = gdp, 
+      unit = country, 
+      time = year, 
+      i_unit = "West Germany",
+      i_time = 1990, 
+      generate_placebos = F
+    ) %>%
+  generate_predictor(time_window = 1981:1990, 
+                     gdp_81_90 = mean(gdp, na.rm = T),
+                     trade_81_90 = mean(trade, na.rm = T), 
+                     infrate_81_90 = mean(inf_pct, na.rm = T) #<<
+  ) %>%
+  generate_predictor(time_window = 1971:1980, 
+                     industry_71_80 = mean(industry, na.rm = T)) %>% 
+  generate_predictor(time_window =c(1970, 1975), #<<
+                     schooling_70_75 = mean(schooling, na.rm = T)) %>%
+  generate_predictor(time_window = 1980,
+                     invest_80 = invest80)
+
+synth_x <-   generate_weights(synth_x, 
+                              optimization_window = 1981:1990) %>%
+  generate_control()
+```
+]
+```{r, echo = F}
+# Unit weights
+comp_unit_x <- grab_unit_weights(synth_x) %>%
+  rename("X Rescaled" = weight)
+
+left_join(comp_unit, comp_unit_m) %>%
+  left_join(comp_unit_x) %>%
+  mutate(across(where(is.numeric), \(x) round(x, 2))) %>%
+  arrange(desc(Main))
+```
+
+---
+# Rescale X
+
+```{r, echo = F}
+# Predictor weights
+comp_pred_x <- grab_predictor_weights(synth_x) %>%
+  rename("X Rescaled" = weight)
+
+left_join(comp_pred, comp_pred_m) %>%
+  left_join(comp_pred_x) %>%
+  mutate(across(where(is.numeric), \(x) round(x, 2))) %>%
+  arrange(desc(Main))
+```
+
+
+
+
+---
+# Rescale X
+
+Wait, what?
+
+--
+
+It turns out that, while the standard SCM algorithm *isn't* X/Y scale-invariant,  .hi-slate[tidysynth] methods *are*. 
+
+Looking into its [source code on Github](https://github.com/edunford/tidysynth/blob/58eda583ea28645a3531cd769b7852ff504656df/R/synth.R#L191) reveals why: it .hi-medgrn[internally standardizes all variables!]
+
+
+
+---
+# Punchline
+
+* Synthetic control .hi-medgrn[is invariant to units/linear scaling of Y] but .hi-red[only when Y is the sole predictor]
+* Canonical synthetic control .hi-red[is not invariant to units/linear scaling of Y/X with multiple predictors] 
+  * Good idea to standardize your predictors *before* estimation
+* .hi-slate[tidysynth] methods .hi-medgrn[internally standardize] all predictors and .hi-medgrn[are invariant to units/linear scaling of Y/X]
+  * No need to pre-standardize!
+
+
+```{r gen_pdf, include = FALSE, cache = FALSE, eval = FALSE}
+infile = list.files(pattern = 'Scale.html')
+pagedown::chrome_print(input = infile, timeout = 200)
+```
