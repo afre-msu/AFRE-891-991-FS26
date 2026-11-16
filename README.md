@@ -149,9 +149,9 @@ Part 3 ([html](https://github.com/afre-msu/AFRE-891-991-FS26/blob/4ebeca37dd782a
  * SCM Assumptions
 
 
- [**Lecture 10: Spatial Data**]()
+ [**Lecture 10: Spatial Data**](https://github.com/afre-msu/AFRE-891-991-FS26/tree/5d939d9bda921768ead691d901c74fd2a6a36f1d/Lecture%20Slides/10-Spatial)
 
-  Intro to Spatial Data ([html]()) ([pdf]())
+  Intro to Spatial Data ([html](https://github.com/afre-msu/AFRE-891-991-FS26/blob/5d939d9bda921768ead691d901c74fd2a6a36f1d/Lecture%20Slides/10-Spatial/Spatial-Intro.html)) ([pdf](https://github.com/afre-msu/AFRE-891-991-FS26/blob/5d939d9bda921768ead691d901c74fd2a6a36f1d/Lecture%20Slides/10-Spatial/Spatial-Intro.pdf))
  * Intro to Spatial Data in R and the sf package
  * Quick Mapping
  * Reference Systems and Projections
