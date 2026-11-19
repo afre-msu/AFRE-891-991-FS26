@@ -122,7 +122,7 @@ Packages we'll use today:
 ```{r}
 if (!require("synthdid")) remotes::install_github("synth-inference/synthdid")
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(fixest, gsynth, scpi, synthdid, tidyverse)
+pacman::p_load(fixest, ggbrace, gsynth, scpi, synthdid, tidyverse)
 ```
 
 --
@@ -193,7 +193,7 @@ Suppose you have .hi-green[balanced panel] with
   * $N$ units
     * First $N_{co}$ units are never exposed to treatment (pure controls)
     * Next $N_{tr} = N - N_{co}$ units receive treatment after time $T_{pre}$
-      * Can be block adoption or staggered adoption
+      * Can be 1 treated or multiple + block adoption 
   
 --
 
@@ -203,7 +203,7 @@ You observe
   * A binary treatment indicator $W_{it}$,
   * and (optionally) time-varying covariates $X_{it}$
   
-i.e. same data requirements as a standard TWFE Diff-in-Diff approach
+i.e. similar data requirements as a standard TWFE Diff-in-Diff approach
 
 ---
 # Synthetic Difference-in-Differences
@@ -239,7 +239,7 @@ $$\underbrace{\sum\limits_{t=1}^{T_{pre}}\left(\omega_0 +  \sum\limits_{i=1}^{N_
   * Penalty term helps non-zero weights be more distributed across control units
     * If $\zeta=0$, weights are identical to Abadie, Diamond, and Hainmueller (2010) SCM weights for a single treated unit 
     * $\zeta$ is *complicated*, see the paper if you want more details
-    * $L_2$/Euclidean norm as in ridge regression (we'll chat more about this in ML lecture)
+    * $L_2$/Euclidean norm as in ridge regression (we'll chat more about this in a bit)
 
 ---
 # Synthetic Difference-in-Differences
@@ -249,10 +249,14 @@ $$\underbrace{\sum\limits_{t=1}^{T_{pre}}\left(\omega_0 +  \sum\limits_{i=1}^{N_
 Choose .hi-medgrn[time weights] $(\hat\lambda_0, \hat\lambda)$ that yield arg min of
 
 
-$$\sum\limits_{i=1}^{N_{co}}\left(\underbrace{\lambda_0 +  \sum\limits_{t=1}^{T_{pre}} \hat\lambda_t Y_{it}}_{Weighted~Average\\~in~Pre-Period} ~~-~~ \underbrace{\frac{1}{T_{post}} \sum\limits_{t= T_{pre}+1}^T Y_{it}}_{Average~in\\Post-Period} \right)^2$$
+$$\sum\limits_{i=1}^{N_{co}}\left(\underbrace{\hat\lambda_0 +  \sum\limits_{t=1}^{T_{pre}} \hat\lambda_t Y_{it}}_{Weighted~Average\\~in~Pre-Period} ~~-~~ \underbrace{\frac{1}{T_{post}} \sum\limits_{t= T_{pre}+1}^T Y_{it}}_{Average~in\\Post-Period} \right)^2$$
   * No regularization in time weights
     * Allows for correlation over time for same unit, but not across units (beyond the systematic component in a latent factor model)
-  
+
+
+
+
+
 ---
 # Synthetic Difference-in-Differences
 
@@ -352,7 +356,23 @@ synthdid_controls(sdid)
 ---
 # Synthetic Diff-in-Diff Application
 
-Plotting the  control unit weights $\omega$:
+Note that by default the control weights sneakily sum to a .hi-medgrn[mass of $>$ 0.9]
+```{r}
+sum(synthdid_controls(sdid))
+length(synthdid_controls(sdid))
+```
+--
+
+Control this with the `mass` argument to get .hi-medgrn[all units with nonzero weights]:
+
+```{r}
+sum(synthdid_controls(sdid, mass = 1)) #<<
+length(synthdid_controls(sdid, mass = 1)) #<<
+```
+---
+# Synthetic Diff-in-Diff Application
+
+Plotting the control unit weights $\omega$:
 
 ```{r}
 synthdid_units_plot(sdid)
@@ -366,6 +386,169 @@ And the time weights $\lambda$
 ```{r}
 summary(sdid)$periods
 ```
+
+---
+# Time Weighs Visualized
+
+Recall that the time weights are constructed to balance two objects:
+
+.pull-left[
+.center.hi-red[1\. Control Group's (Time-Weighted) Pre-Treatment Mean]
+
+
+$$\hat\lambda_0 +  \sum\limits_{t=1}^{T_{pre}} \hat\lambda_t \bar{Y}_{t}$$
+
+
+
+]
+--
+.pull-right[
+.center.hi-dkred[1\. Control Group's Post-Treatment Mean]
+
+
+$$\frac{1}{T_{post}} \sum\limits_{t= T_{pre}+1}^T \bar{Y}_{t}$$
+]
+
+---
+# Time Weights Visualized
+
+
+Time path of control units' average:
+
+
+```{r, echo = F, out.width = "100%"}
+ctrl_path<- filter(california_prop99, treated == 0) %>% 
+  summarise(PacksPerCapita = mean(PacksPerCapita, na.rm = T), .by = Year) 
+
+ggplot() +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Control Group Mean"), data = ctrl_path) +
+  geom_vline(aes(xintercept = 1988), col = "gray50", alpha = 0.5, linetype = "dashed") +
+  scale_color_manual(name = NULL, values = c("Control Group Mean" = "red1"))+
+  scale_x_continuous(limits = c(min(california_prop99$Year), max(california_prop99$Year))) +
+  scale_y_continuous(limits = c(90, 155)) +
+  theme_minimal()
+```
+
+
+---
+# Time Weights Visualized
+
+Separating the  .hi-red[pre-period] and .hi-dkred[post-period]:
+
+
+```{r, echo = F, out.width = "100%"}
+ctrl_pre <- filter(ctrl_path, Year < 1989) 
+ctrl_post <- filter(ctrl_path,Year >=1989) 
+
+
+ggplot() +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Donor Mean, Pre"), data = ctrl_pre) +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Donor Mean, Post"), data = ctrl_post) +
+  geom_vline(aes(xintercept = 1988), col = "gray50", alpha = 0.5, linetype = "dashed") +
+  scale_color_manual(name = NULL, 
+                     values = c("Donor Mean, Pre" = "red1", "Donor Mean, Post" = "red4")) +
+  scale_x_continuous(limits = c(min(california_prop99$Year), max(california_prop99$Year))) +
+  scale_y_continuous(limits = c(90, 155)) +
+  theme_minimal()
+```
+
+
+
+
+---
+# Time Weights Visualized
+
+The weights $\hat\lambda_0, \hat\lambda_1, ... \hat\lambda_{T_0}$ are chosen to match the .hi-dkred[post-period average]:
+
+```{r, echo = F, out.width = "100%"}
+ctrl_post_mean <- filter(ctrl_path, Year >= 1989) %>% summarise(mean = mean(PacksPerCapita)) %>% pull(mean)
+
+
+ggplot() +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Donor Mean, Pre"), data = ctrl_pre) +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Donor Mean, Post"), data = ctrl_post) +
+  geom_vline(aes(xintercept = 1988), col = "gray50", alpha = 0.5, linetype = "dashed") +
+  geom_linerange(aes(y = ctrl_post_mean, xmin = 1988, xmax = max(ctrl_post$Year), col = "Post-Period Donor Mean"), alpha = 0.95, linetype = "longdash") +
+  scale_color_manual(name = NULL, values = c("Donor Mean, Pre" = "red1", "Donor Mean, Post" = "red4", "Post-Period Donor Mean" = "red4")) +
+  scale_x_continuous(limits = c(min(california_prop99$Year), max(california_prop99$Year))) +
+  scale_y_continuous(limits = c(90, 155)) +
+  theme_minimal()
+```
+
+
+---
+# Time Weights Visualized
+
+Just taking the simple average ($\lambda_t = {1}/{T_0}$) in the pre-period doesn't cut it:
+
+```{r, echo = F, out.width = "100%"}
+ctrl_pre_mean <- filter(ctrl_path, Year < 1989) %>% summarise(mean = mean(PacksPerCapita)) %>% pull(mean)
+
+
+ggplot() +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Donor Mean, Pre"), data = ctrl_pre) +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Donor Mean, Post"), data = ctrl_post) +
+  geom_vline(aes(xintercept = 1988), col = "gray50", alpha = 0.5, linetype = "dashed") +
+  geom_linerange(aes(y = ctrl_post_mean, xmin = 1988, xmax = max(ctrl_post$Year), col = "Post-Period Donor Mean"), alpha = 0.95, linetype = "longdash") +
+  geom_linerange(aes(y = ctrl_pre_mean, xmin = min(ctrl_path$Year), xmax = 1988, col = "Pre-Period Donor Mean"), alpha = 0.95, linetype = "longdash") +
+  scale_color_manual(name = NULL, values = c("Donor Mean, Pre" = "red1", "Pre-Period Donor Mean" = "red1", "Donor Mean, Post" = "red4", "Post-Period Donor Mean" = "red4")) +
+  scale_x_continuous(limits = c(min(california_prop99$Year), max(california_prop99$Year))) +
+  scale_y_continuous(limits = c(90, 155)) +
+  theme_minimal()
+```
+
+---
+# Time Weights Visualized
+
+Multiplying the pre-period means by the time weights, $\sum_{t=1}^{T_{pre}} \hat\lambda_t \bar{Y}_{t}$:
+
+
+```{r, echo = F, out.width = "100%"}
+time_weights <- data.frame(Year = ctrl_pre$Year,
+                           time_weight = attr(sdid, "weights")$lambda)
+
+ctrl_time_pre <- left_join(ctrl_pre, time_weights, by = "Year")
+ctrl_time_pre_mean <- sum(ctrl_time_pre$PacksPerCapita*ctrl_time_pre$time_weight)
+
+
+ggplot() +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Donor Mean, Pre"), data = ctrl_pre) +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Donor Mean, Post"), data = ctrl_post) +
+  geom_vline(aes(xintercept = 1988), col = "gray50", alpha = 0.5, linetype = "dashed") +
+  geom_linerange(aes(y = ctrl_post_mean, xmin = 1988, xmax = max(ctrl_post$Year), col = "Post-Period Donor Mean"), alpha = 0.95, linetype = "longdash") +
+  geom_linerange(aes(y = ctrl_pre_mean, xmin = min(ctrl_path$Year), xmax = 1988, col = "Pre-Period Donor Mean"), alpha = 0.95, linetype = "longdash") +
+  geom_linerange(aes(y = ctrl_time_pre_mean, xmin = min(ctrl_path$Year), xmax = 1988, col = "Time-Weighted\nPre-Period Donor Mean"), alpha = 0.95, linetype = "dashed") +
+  scale_color_manual(name = NULL, values = c("Donor Mean, Pre" = "red1", "Pre-Period Donor Mean" = "red1", "Time-Weighted\nPre-Period Donor Mean" = "red1", "Donor Mean, Post" = "red4", "Post-Period Donor Mean" = "red4")) +
+  scale_x_continuous(limits = c(min(california_prop99$Year), max(california_prop99$Year))) +
+  scale_y_continuous(limits = c(90, 155)) +
+  theme_minimal()
+```
+
+---
+# Time Weights Visualized
+
+That gap? $\hat\lambda_0$:
+
+
+```{r, echo = F, out.width = "100%"}
+gap_df <- data.frame(x = c(1988, 1988),
+                     y =c(ctrl_time_pre_mean, ctrl_post_mean),
+                     group = c("hat(lambda)[0]"))
+ggplot() +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Donor Mean, Pre"), data = ctrl_pre) +
+ geom_line(aes(x = Year, y = PacksPerCapita, color = "Donor Mean, Post"), data = ctrl_post) +
+  geom_vline(aes(xintercept = 1988), col = "gray50", alpha = 0.5, linetype = "dashed") +
+  geom_linerange(aes(y = ctrl_post_mean, xmin = 1988, xmax = max(ctrl_post$Year), col = "Post-Period Donor Mean"), alpha = 0.95, linetype = "longdash") +
+  geom_linerange(aes(y = ctrl_pre_mean, xmin = min(ctrl_path$Year), xmax = 1988, col = "Pre-Period Donor Mean"), alpha = 0.95, linetype = "longdash") +
+  geom_linerange(aes(y = ctrl_time_pre_mean, xmin = min(ctrl_path$Year), xmax = 1988, col = "Time-Weighted\nPre-Period Donor Mean"), alpha = 0.95, linetype = "dashed") +
+  stat_brace(aes(x = x, y= y, ), data = gap_df, rotate = 270)+
+  stat_bracetext(aes(x = x, y= y, label = group ), data = gap_df, rotate = 270, parse = T)+
+  scale_color_manual(name = NULL, values = c("Donor Mean, Pre" = "red1", "Pre-Period Donor Mean" = "red1", "Time-Weighted\nPre-Period Donor Mean" = "red1", "Donor Mean, Post" = "red4", "Post-Period Donor Mean" = "red4")) +
+  scale_x_continuous(limits = c(min(california_prop99$Year), max(california_prop99$Year))) +
+  scale_y_continuous(limits = c(90, 155)) +
+  theme_minimal()
+```
+
 ---
 # Synthetic Diff-in-Diff Application
 
@@ -501,7 +684,8 @@ You observe
 
   * Stable treatment and no interference across units (SUTVA)
   * Prior to treatment, a unit's potential outcomes are equal to its never-treated potential outcomes
-  * .hi-green[No Anticipation:] 
+   
+   i.e. .hi-green[No Anticipation:] 
   
   $$Y_{it}(s) = Y_{it}(\infty) \text{ for } t<s, \text{ with treatment time } s$$
 
@@ -527,13 +711,13 @@ You observe
 
 If we want to extend canonical SCM to the .hi-blue[many-treated] case, we could take one of two approaches.
 
-.hi-medgrn[1\. Separate SCM:] estimate a separate SCM for each treated unit
+.hi-medgrn[1\. Separate SCM:] estimate a separate SCM for .hi-medgrn[each treated unit]
   * i.e. minimize pre-treatment imbalance for each treated unit separately
   * Can lead to poor mean fit, biasing the ATE
   
 --
 
-.hi-purple[2\. Pooled SCM:] estimate one SCM for average of treated units
+.hi-purple[2\. Pooled SCM:] estimate one SCM for .hi-purple[the average of treated units]
   * i.e. minimize the average pre-treatment imbalance across all treated units
   * Can achieve strong average fit but obtain poor unit-specific treatment effects
   
@@ -542,19 +726,59 @@ If we want to extend canonical SCM to the .hi-blue[many-treated] case, we could 
 .hi-green[The Solution:] "pool" the two estimators, improving on each approach in isolation
 
 ---
+
 # Partially Pooled Synthetic Control
 
 Choose SCM weights to minimize the weighted average of the pooled and unit-specific pre-treatment balance:
 
-$$\min\limits_{\Gamma \in \Delta^{scm}}~~ \nu(\underbrace{\tilde{q}^{pool}(\Gamma))^2}_{\text{Normalized}\\\text{pooled}\\\text{imbalance}} + (1-\nu)(\underbrace{\tilde{q}^{sep}(\Gamma))^2}_{\text{Normalized}\\\text{separate}\\\text{imbalance}} + \underbrace{\lambda||\Gamma||^2_F}_{\text{penalize sum of}\\\text{squared weights}}$$
+$$\min\limits_{\mathbf{W} \in \Delta^{scm}}~~ \nu(\underbrace{\tilde{q}^{pool}(\mathbf{W}))^2}_{\text{Normalized}\\\text{pooled}\\\text{imbalance}} + (1-\nu)(\underbrace{\tilde{q}^{sep}(\mathbf{W}))^2}_{\text{Normalized}\\\text{separate}\\\text{imbalance}} + \underbrace{\lambda||\mathbf{W}||^2_F}_{\text{penalize sum of}\\\text{squared weights}}$$
 
   * $\hat q^{sep},~ \hat q^{pool}$ the (normalized) root mean square of separate and pooled pre-treatment fit
-  * $\lambda||\Gamma||^2_F$ a penalty term (as in SCM)
+  * $\lambda||\mathbf{W}||^2_F$ a ridge penalty on unit weights $\mathbf{W}$ (as in SCM) 
+  * $\nu$ the hyperparameter determining the degree of "partial pooling"
+
+ 
+ 
+---
+# Partially Pooled Synthetic Control
+
+Choose SCM weights to minimize the weighted average of the pooled and unit-specific pre-treatment balance:
+
+$$\min\limits_{\mathbf{W} \in \Delta^{scm}}~~  (\underbrace{\tilde{q}^{sep}(\mathbf{W}))^2}_{\text{Normalized}\\\text{separate}\\\text{imbalance}} + \underbrace{\lambda||\mathbf{W}||^2_F}_{\text{penalize sum of}\\\text{squared weights}}$$
+
+  * $\hat q^{sep},~ \hat q^{pool}$ the (normalized) root mean square of separate and pooled pre-treatment fit
+  * $\lambda||\mathbf{W}||^2_F$ a ridge penalty on unit weights $\mathbf{W}$ (as in SCM) 
+  * $\nu$ the hyperparameter determining the degree of "partial pooling"
+    * $\nu = 0 \Rightarrow \text{Separate SCM}$
+    
+    
+---
+# Partially Pooled Synthetic Control
+
+Choose SCM weights to minimize the weighted average of the pooled and unit-specific pre-treatment balance:
+
+$$\min\limits_{\mathbf{W} \in \Delta^{scm}}~~ (\underbrace{\tilde{q}^{pool}(\mathbf{W}))^2}_{\text{Normalized}\\\text{pooled}\\\text{imbalance}} +  \underbrace{\lambda||\mathbf{W}||^2_F}_{\text{penalize sum of}\\\text{squared weights}}$$
+
+  * $\hat q^{sep},~ \hat q^{pool}$ the (normalized) root mean square of separate and pooled pre-treatment fit
+  * $\lambda||\mathbf{W}||^2_F$ a ridge penalty on unit weights $\mathbf{W}$ (as in SCM) 
+  * $\nu$ the hyperparameter determining the degree of "partial pooling"
+    * $\nu = 0 \Rightarrow \text{Separate SCM}$
+    * $\nu = 1 \Rightarrow \text{Pooled SCM}$
+
+---
+# Partially Pooled Synthetic Control
+
+Choose SCM weights to minimize the weighted average of the pooled and unit-specific pre-treatment balance:
+
+$$\min\limits_{\mathbf{W} \in \Delta^{scm}}~~ \nu(\underbrace{\tilde{q}^{pool}(\mathbf{W}))^2}_{\text{Normalized}\\\text{pooled}\\\text{imbalance}} + (1-\nu)(\underbrace{\tilde{q}^{sep}(\mathbf{W}))^2}_{\text{Normalized}\\\text{separate}\\\text{imbalance}} + \underbrace{\lambda||\mathbf{W}||^2_F}_{\text{penalize sum of}\\\text{squared weights}}$$
+
+  * $\hat q^{sep},~ \hat q^{pool}$ the (normalized) root mean square of separate and pooled pre-treatment fit
+  * $\lambda||\mathbf{W}||^2_F$ a ridge penalty on unit weights $\mathbf{W}$ (as in SCM) 
   * $\nu$ the hyperparameter determining the degree of "partial pooling"
     * $\nu = 0 \Rightarrow \text{Separate SCM}$
     * $\nu = 1 \Rightarrow \text{Pooled SCM}$
     * $0 < \nu < 1 \Rightarrow \text{Partially-Pooled SCM}$
-    
+       
 ---
 # Partially Pooled Synthetic Control
 
@@ -810,11 +1034,12 @@ In .hi-slate[scpi], we have a *ton* of control over the constraints we impose on
 
 2\. Use Pre-Specified Constraint Profiles
  
-.hi-blue[LASSO (Chernozhukov et al. 2021):]
+.hi-blue[LASSO/L1 Norm (Chernozhukov et al. 2021):]
 
 $$ 
- \mathcal{W} = \{w \in \mathbb{R}^J: ||w||_1 \leq 1 \}
+\mathcal{W} = \{w \in \mathbb{R}^J: ||w||_1 := \sqrt{\sum\limits_{i=1}^n |w_i|}\leq 1 \}
 $$
+
   * Shorthand: `list(name = "lasso", Q = 1)`
   * Equivalent to `list(p = "L1", lb = -Inf, dir = "<=", Q = 1)`  
  
@@ -829,11 +1054,13 @@ In .hi-slate[scpi], we have a *ton* of control over the constraints we impose on
 
 2\. Use Pre-Specified Constraint Profiles
  
-.hi-red[Ridge (Amjad et al. 2018):]
+.hi-red[Ridge/L2 Norm (Amjad et al. 2018):]
+
 
 $$ 
- \mathcal{W} = \{w \in \mathbb{R}^J: ||w||_2 \leq Q \}
+ \mathcal{W} = \{w \in \mathbb{R}^J: ||w||_2 := \sqrt{\sum\limits_{i=1}^n w_i^2}\leq Q \}
 $$
+
   * Shorthand: `list(name = "ridge")`
   * Equivalent to `list(p = "L2", lb = -Inf, dir = "<=", Q = 1)`  
  
@@ -920,13 +1147,103 @@ Manually looking at our synthetic control weights for Delaware:
 # weights a vector with names in format of TREATED_UNIT.CONTROL_UNIT
 scpi_wts <- fit_scpi$est.results$w
 
-data.frame(
+de_wts <- data.frame(
   State = names(scpi_wts[str_detect(names(scpi_wts), "^DE")]) %>% str_remove("DE\\."),
-  Weight = scpi_wts[str_detect(names(scpi_wts), "^DE")] %>% as.numeric() %>% round(4)
+  Separate = scpi_wts[str_detect(names(scpi_wts), "^DE")] %>% as.numeric() %>% round(4)
 ) %>% 
-  arrange(desc(Weight))
+  arrange(desc(Separate))
+de_wts
 ```
 
+---
+# Separate vs. Pooled
+
+What if we had used pooled estimation?
+
+```{r, echo = F, eval = F}
+fit_pool <- scest(data = scdm_adt, # prepared scd/scDM data object
+                          w.constr = list(name = "L1-L2", Q = 1, Q2 = 1), # constraint set on the weights
+                          V = "pooled", # form of weighting matrix (separate or pooled)
+                          solver = "ECOS")
+write_rds(fit_pool, "output/fit_pool.rds")
+```
+
+```{r, echo = F}
+fit_pool <- read_rds("output/fit_pool.rds")
+pool_wts <- fit_pool$est.results$w
+
+de_wts_pool <- data.frame(
+  State = names(pool_wts[str_detect(names(pool_wts), "^DE")]) %>% str_remove("DE\\."),
+  Pooled = pool_wts[str_detect(names(pool_wts), "^DE")] %>% as.numeric() %>% round(4)
+) 
+
+left_join(de_wts, de_wts_pool, "State") %>%
+  rename("Donor States for Delaware" = State)
+```
+
+---
+# Weight Constraints
+
+Or different feasibility constraints on the weights?
+
+<br>
+
+```{r, echo = F, eval = F}
+fit_l1_l2 <- scest(data = scdm_adt, # prepared scd/scDM data object
+                          w.constr = list(p = "L1-L2", lb = 0, Q = 1, Q2 = 1, dir = "==/<="), # constraint set on the weights
+                          V = "separate") # form of weighting matrix (separate or pooled)
+write_rds(fit_l1_l2, "output/fit_l1_l2.rds")
+fit_simplex <- scest(data = scdm_adt, # prepared scd/scDM data object
+                          w.constr = list(name = "simplex", Q = 1), # constraint set on the weights
+                          V = "separate") # form of weighting matrix (separate or pooled)
+write_rds(fit_simplex, "output/fit_simplex.rds")
+
+fit_ols <- scest(data = scdm_adt, # prepared scd/scDM data object
+                          w.constr = list(name = "ols"), # constraint set on the weights
+                          V = "separate") # form of weighting matrix (separate or pooled)
+write_rds(fit_ols, "output/fit_ols.rds")
+
+fit_ridge <- scest(data = scdm_adt, # prepared scd/scDM data object
+                          w.constr = list(p = "L2", lb = -Inf, dir = "<=", Q = 1), # constraint set on the weights
+                          V = "separate") # form of weighting matrix (separate or pooled)
+write_rds(fit_ridge, "output/fit_ridge.rds")
+```
+
+```{r, echo = F}
+fit_l1_l2 <- read_rds("output/fit_l1_l2.rds")
+fit_simplex <- read_rds("output/fit_simplex.rds")
+fit_ols <- read_rds("output/fit_ols.rds")
+fit_ridge <- read_rds("output/fit_ridge.rds")
+
+l1_l2_wts<- fit_simplex$est.results$w
+simplex_wts<- fit_simplex$est.results$w
+ols_wts<- fit_ols$est.results$w
+ridge_wts<- fit_ridge$est.results$w
+
+de_wts_l1_l2 <- data.frame(
+  State = names(l1_l2_wts[str_detect(names(l1_l2_wts), "^DE")]) %>% str_remove("DE\\."),
+ L1_L2 = l1_l2_wts[str_detect(names(l1_l2_wts), "^DE")] %>% as.numeric() %>% round(4)
+) 
+de_wts_simplex <- data.frame(
+  State = names(simplex_wts[str_detect(names(simplex_wts), "^DE")]) %>% str_remove("DE\\."),
+  Simplex = simplex_wts[str_detect(names(simplex_wts), "^DE")] %>% as.numeric() %>% round(4)
+) 
+de_wts_ols <- data.frame(
+  State = names(ols_wts[str_detect(names(ols_wts), "^DE")]) %>% str_remove("DE\\."),
+  OLS = ols_wts[str_detect(names(ols_wts), "^DE")] %>% as.numeric() %>% round(4)
+) 
+de_wts_ridge <- data.frame(
+  State = names(ridge_wts[str_detect(names(ridge_wts), "^DE")]) %>% str_remove("DE\\."),
+  Ridge = ridge_wts[str_detect(names(ridge_wts), "^DE")] %>% as.numeric() %>% round(4)
+) 
+
+
+left_join(de_wts_l1_l2, de_wts_simplex, "State") %>%
+ left_join(de_wts_ols, "State") %>%
+left_join(de_wts_ridge, "State") %>%
+ rename("Donor States for Delaware" = State,
+        "L1 - L2" = L1_L2)
+```
 
 ---
 # scplot()/scplotMulti()

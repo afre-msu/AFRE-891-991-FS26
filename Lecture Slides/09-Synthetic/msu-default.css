@@ -85,8 +85,11 @@ font-weight: 600;
 .hi-red {
   font-weight: 600;
   color: #fb6107 !important;
-} #e64173 !important;
-}
+} 
+.hi-dkred {
+  font-weight: 600;
+  color: #cd0000 !important;
+} 
 /*  Colored Text */
 .green {
   color: #7BBD00  !important;
